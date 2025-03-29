@@ -1,0 +1,41 @@
+.content-loader {
+  height: 60px;
+  width: 60px;
+  position: relative;
+  animation: loaderAnimation 1.5s infinite linear;
+}
+
+.content-loader-inner {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  left: 0;
+  top: 0;
+  background: linear-gradient(135deg, #f59e0b, #d5650f);
+  border-radius: 50%;
+  animation: innerAnimation 1s infinite ease-in-out;
+}
+
+@keyframes loaderAnimation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes innerAnimation {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+  50% {
+    width: 100%;
+    opacity: 0.7;
+  }
+  100% {
+    width: 0;
+    opacity: 0;
+  }
+}
