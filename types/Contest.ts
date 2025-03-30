@@ -5,7 +5,6 @@ export type Contest = {
   start_date: string;
   end_date: string;
   category: string[];
-  contact: string;
 
   thumbnail_url?: string;
   federation?: string;
@@ -15,5 +14,4 @@ export type Contest = {
 export type DetailedContest = Contest & {
   // FIXME: extend type correctly
   contest_url: string;
-  is_approved: boolean | string;
 };

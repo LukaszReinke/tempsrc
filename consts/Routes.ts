@@ -27,8 +27,6 @@ export const ROUTES = {
     LOGOUT: '/api/logout',
     CONTESTS: '/api/contests',
     WORKSHOPS: '/api/workshops',
-    CONTESTS_ALL: '/api/contests/all',
-    WORKSHOPS_ALL: '/api/workshops/all',
     PROFILE: '/api/profile',
 
     GET_USER: (user_id: string) => `/api/users/${user_id}`,

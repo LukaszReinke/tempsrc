@@ -16,7 +16,5 @@ export * from './LogoutModal';
 export * from './UrlInput';
 export * from './ExternalDomainImage';
 export * from './Table';
-export * from './WorkshopsTable';
-export * from './ContestsTable';
 export * from './ListItem';
 export * from './LoaderWrapper';

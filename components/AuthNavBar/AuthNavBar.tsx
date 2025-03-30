@@ -9,8 +9,6 @@ import {
   EnvelopeOpenIcon,
   UserGroupIcon,
   UserIcon,
-  TrophyIcon,
-  WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
