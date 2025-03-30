@@ -1,3 +1,4 @@
+
 export type Workshop = {
   workshop_id: string;
   workshop_topic: string;
@@ -6,7 +7,11 @@ export type Workshop = {
   start_date: string;
   end_date: string;
   location: string;
-
-  thumbnail_url?: string | null;
-  participation_condition?: string;
+  attendance_limitation: string;
+  category: string;
+  workshop_url: string;
+  thumbnail_url: string;
+  participation_condition: string;
+  
+  is_approved: boolean | string;
 };

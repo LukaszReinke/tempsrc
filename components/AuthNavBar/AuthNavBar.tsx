@@ -9,6 +9,9 @@ import {
   EnvelopeOpenIcon,
   UserGroupIcon,
   UserIcon,
+  TrophyIcon,
+  WrenchScrewdriverIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -71,7 +74,7 @@ const NAVIGATION_LINKS = [
     href: ROUTES.CREW_WORKSHOP_MANAGEMENT,
     children: (
       <>
-        <CalendarDaysIcon className={LINK_ICON_STYLES} />
+        <SparklesIcon className={LINK_ICON_STYLES} />
         <span className={LINK_LABEL_STYLES}>Workshops</span>
       </>
     ),
@@ -80,7 +83,7 @@ const NAVIGATION_LINKS = [
     href: ROUTES.CREW_CONTEST_MANAGEMENT,
     children: (
       <>
-        <CalendarDaysIcon className={LINK_ICON_STYLES} />
+        <TrophyIcon className={LINK_ICON_STYLES} />
         <span className={LINK_LABEL_STYLES}>Contests</span>
       </>
     ),

@@ -1,3 +1,5 @@
-export default function ContestManagementPage() {
-  return <div className="flex align-center justify-center text-white">asdas</div>;
+import { ContestsTable } from '@hd/components';
+
+export default async function ContestManagementPage() {
+  return <ContestsTable />;
 }

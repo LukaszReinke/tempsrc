@@ -6,3 +6,4 @@ export * from './Contest';
 export * from './Workshop';
 export * from './Timeline';
 export * from './TimelineItemStatus';
+export * from './Pagination';
