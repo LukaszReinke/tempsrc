@@ -14,8 +14,10 @@ const VALIDATE_ERROR_MSG =
   'Invalid URL. Please check the link and try again. If you’re sure the URL is correct, contact us for assistance.';
 
 export const UrlInput = (props: InputProps & UrlInputProps) => {
-  const regExpToValidate = props.customRegex ? props.customRegex : URL_REGEX;
-  const messageToDisplay = props.customErrorMessage ? props.customErrorMessage : VALIDATE_ERROR_MSG;
+  const { customRegex, customErrorMessage, ...inputProps } = props;
+
+  const regExpToValidate = customRegex ? customRegex : URL_REGEX;
+  const messageToDisplay = customErrorMessage ? customErrorMessage : VALIDATE_ERROR_MSG;
 
   const [error, setError] = useState('');
 
@@ -43,7 +45,7 @@ export const UrlInput = (props: InputProps & UrlInputProps) => {
 
   return (
     <Input
-      {...props}
+      {...inputProps}
       onBlur={handleBlur}
       errorMessage={error}
       icon={props.icon ? props.icon : <GlobeAltIcon className="w-5 h-5" />}

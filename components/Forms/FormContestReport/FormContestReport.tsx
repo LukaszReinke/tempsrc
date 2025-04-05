@@ -1,85 +1,142 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
-import { Button, Input, TextAreaInput } from '@hd/ui';
+import React, { useCallback, useRef, useState } from 'react';
+import { Button, Input, Switch, TextAreaInput } from '@hd/ui';
 import { DateInput, LocationInput, UrlInput } from '@hd/components';
+import { Transition } from '@headlessui/react';
+import { ROUTES } from '@hd/consts';
+import { API_GENERIC_ERROR } from './const';
+import { ContestsPOST } from '@hd/types';
 
 export const FormContestReport = () => {
+  // TODO: on release of TOAST CONTEXT
   const [error, setError] = useState<null | string>(null);
+  const [isOrganizerChecked, setIsOrganizerChecked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const urlRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
-  const contactRef = useRef<HTMLInputElement>(null);
   const categoriesRef = useRef<HTMLTextAreaElement>(null);
-  const locationRef = useRef<HTMLInputElement>(null);
-  const dateRef = useRef<HTMLInputElement>(null);
-  const timeRef = useRef<HTMLInputElement>(null);
+  const locationUrlRef = useRef<HTMLInputElement>(null);
+  const startDateRef = useRef<HTMLInputElement>(null);
+  const endDateRef = useRef<HTMLInputElement>(null);
+  const federationRef = useRef<HTMLInputElement>(null);
+  const contactRef = useRef<HTMLInputElement>(null);
+  const thumbnailUrlRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = useCallback(async (event: React.FormEvent) => {
+    setIsLoading(true);
     event.preventDefault();
 
-    const url = urlRef.current?.value;
-    const name = nameRef.current?.value;
-    const contact = contactRef.current?.value;
-    const categories = categoriesRef.current?.value;
-    const location = locationRef.current?.value;
-    const date = dateRef.current?.value;
-    const time = timeRef.current?.value;
+    const body = {
+      contest_url: urlRef.current?.value,
+      contest_name: nameRef.current?.value,
+      location_url: locationUrlRef.current?.value,
+      categories: categoriesRef.current?.value,
+      start_date: startDateRef.current?.value,
+      end_date: endDateRef.current?.value,
+      federation: federationRef.current?.value,
+      contact: contactRef.current?.value,
+      thumbnail_url: contactRef.current?.value,
+    } as ContestsPOST;
 
-    console.log('URL:', url);
-    console.log('Name:', name);
-    console.log('Contact:', contact);
-    console.log('Categories:', categories);
-    console.log('Place:', location);
-    console.log('Date:', date);
-    console.log('Time:', time);
-
-    if (!url || !name) {
+    if (
+      !body.contest_url ||
+      !body.contest_name ||
+      !body.location_url ||
+      !body.categories ||
+      !body.start_date
+    ) {
       setError(`All fields marked with '*' are required.`);
       return;
     }
-  };
+
+    try {
+      const response = await fetch(ROUTES.API.CONTESTS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || API_GENERIC_ERROR);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : API_GENERIC_ERROR);
+    }
+    setIsLoading(false);
+  }, []);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 p-10 rounded-xl bg-zinc-950/50 shadow-lg">
       <UrlInput
-        id="url"
         label="Contest official website / Social media event page"
         ref={urlRef}
         placeholder="Enter the event URL"
         required
       />
 
-      <Input
-        label="Event name"
-        id="name"
-        ref={nameRef}
-        required
-        placeholder="Enter the event name"
-      />
+      <LocationInput ref={locationUrlRef} required label="Location / place" />
+
+      <Input label="Event name" ref={nameRef} required placeholder="Official name of the contest" />
 
       <TextAreaInput
         label="Categories"
-        id="categories"
         required
         rows={2}
         ref={categoriesRef}
         placeholder="Competition categories - for e.g. Pole Sport, Pole Art... (comma separated)"
       />
 
-      <LocationInput ref={locationRef} label="Location / place" />
+      <div className="flex gap-6 sm:gap-3 flex-col sm:flex-row">
+        <DateInput label="Start date" required ref={startDateRef} />
+        <DateInput label="End date - if differs" ref={endDateRef} />
+      </div>
 
-      <DateInput label="Date" id="date" ref={dateRef} />
+      <Input label="Federation" ref={federationRef} placeholder="Official federation name" />
 
-      <Input
-        label="Contact data"
-        id="contact"
-        ref={contactRef}
-        placeholder="Enter your contact info - email or phone number"
-      />
+      <div className="flex pt-2">
+        <Switch
+          onChange={() => setIsOrganizerChecked((prev) => !prev)}
+          checked={isOrganizerChecked}
+        />
+        <div className={`pl-3 ${isOrganizerChecked ? '' : 'text-zinc-400'} font-semibold`}>
+          {`I'm an `}
+          <span className={`${isOrganizerChecked ? 'font-semibold text-amber-500' : ''}`}>
+            organizer
+          </span>
+          {` and want to provide more data`}
+        </div>
+      </div>
 
-      <div className="flex justify-end">
-        <Button type="submit">Submit</Button>
+      <Transition
+        show={isOrganizerChecked}
+        enter="transition ease-out duration-400 transform"
+        enterFrom="opacity-0 -translate-y-2"
+        enterTo="opacity-100 translate-y-0"
+        leave="transition ease-in duration-300 transform"
+        leaveFrom="opacity-100 translate-y-0"
+        leaveTo="opacity-0 -translate-y-2"
+      >
+        <div className="space-y-6">
+          <Input
+            label="Contact data"
+            ref={contactRef}
+            placeholder="Enter your contact info - email or phone number"
+          />
+
+          <UrlInput
+            label="Thumbail URL (vertical aspect ratio prefered)"
+            ref={thumbnailUrlRef}
+            placeholder="Provide prefered thumbnail / poster URL"
+          />
+        </div>
+      </Transition>
+
+      <div className="flex justify-center">
+        <Button loading={isLoading} type="submit" size="lg">
+          Submit
+        </Button>
       </div>
     </form>
   );

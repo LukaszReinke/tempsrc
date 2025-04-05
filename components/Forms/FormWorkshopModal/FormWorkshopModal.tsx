@@ -1,250 +1,266 @@
 'use client';
 
 import { DateInput } from '@hd/components/DateInput';
-import { Workshop } from '@hd/types';
-import { Input, Modal, TextAreaInput, Switch } from '@hd/ui';
-import { useCallback, useRef, useState, useMemo } from 'react';
-import { ROUTES, SYSTEM_ROLES } from '@hd/consts';
-import { useToast } from '@hd/context';
+import { ROUTES } from '@hd/consts';
+import { SYSTEM_ROLES, SYSTEM_ROLES_SELECT_OPTIONS } from '@hd/consts';
 import { useUser } from '@hd/context';
+import { WorkshopsGET } from '@hd/types';
+import { Input, Modal, Select, SelectOption, Tooltip, InputUrl } from '@hd/ui';
+import { getLabelByValue } from '@hd/utils';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 type WorkshopModalFormProps = {
-  openWithWorkshop: null | Workshop;
-  onClose: () => void;
-  refreshWorkshops: () => void;
-};
+    openWithWorkshop: null | WorkshopsGET;
+    onClose: () => void;
+    refreshWorkshops: () => void;
+  };
 
-export const FormWorkshopModal = ({
-  openWithWorkshop,
-  onClose,
-  refreshWorkshops,
-}: WorkshopModalFormProps) => {
-  const [error, setError] = useState<string | null>(null);
-  const { addToast } = useToast();
-  const { user } = useUser();
-  const [isApproved] = useState(true);
-  
-  const rolesPermited = useMemo(() => {
-    return user?.role === SYSTEM_ROLES.ADMIN || 
-           user?.role === SYSTEM_ROLES.SUPER_ADMIN || 
-           user?.role === SYSTEM_ROLES.EVENT_MOD;
-  }, [user?.role]);
-  
-  const workshopTopicsRef = useRef<HTMLInputElement>(null);
-  const coachesRef = useRef<HTMLInputElement>(null);
-  const organizerRef = useRef<HTMLInputElement>(null);
-  const startsDateRef = useRef<HTMLInputElement>(null);
-  const endsDateRef = useRef<HTMLInputElement>(null);
-  const workshopUrlRef = useRef<HTMLInputElement>(null);
-  const locationRef = useRef<HTMLInputElement>(null);
-  const attendanceLimitationRef = useRef<HTMLInputElement>(null);
-  const categoryRef = useRef<HTMLTextAreaElement>(null);
-  const thumbnailUrlRef = useRef<HTMLInputElement>(null);
-  const participationConditionRef = useRef<HTMLInputElement>(null);
-  const isApprovedRef = useRef<HTMLInputElement>(null);
+  export const FormWorkshopModal = ({ openWithWorkshop, onClose, refreshWorkshops}: WorkshopModalFormProps) => {
 
-  const handleSave = useCallback(async () => {
-    if (!rolesPermited) {
-      setError('You do not have permission to perform this action.');
-      addToast('error', 'Permission denied. You cannot modify workshops.');
-      return;
-    }
+    const [error, setError] = useState<string | null>(null);
+    const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
 
-    const workshop_topic = workshopTopicsRef.current?.value?.trim();
-    const coaches = coachesRef.current?.value?.trim();
-    const organizer = organizerRef.current?.value?.trim();
-    const start_date = startsDateRef.current?.value?.trim();
-    const end_date = endsDateRef.current?.value?.trim();
-    const workshop_url = workshopUrlRef.current?.value?.trim();
-    const location = locationRef.current?.value?.trim();
-    const attendance_limitation = attendanceLimitationRef.current?.value?.trim();
-    const category = categoryRef.current?.value?.trim();
-    const thumbnail_url = thumbnailUrlRef.current?.value?.trim();
-    const participation_condition = participationConditionRef.current?.value?.trim();
-    const is_approved = isApprovedRef.current?.checked || false;
+    const workshopTopicRef = useRef<HTMLInputElement>(null);
+    const workshopUrlRef = useRef<HTMLInputElement>(null);
+    const coachesRef = useRef<HTMLInputElement>(null);
+    const organizerRef = useRef<HTMLInputElement>(null);
+    const locationRef = useRef<HTMLInputElement>(null);
+    const locationUrlRef = useRef<HTMLInputElement>(null);
+    const startDateRef = useRef<HTMLInputElement>(null);
+    const endDateRef = useRef<HTMLInputElement>(null);
+    const thumbnailUrlRef = useRef<HTMLInputElement>(null);
+    const participationConditionRef = useRef<HTMLInputElement>(null);
+    const contactRef = useRef<HTMLInputElement>(null);
+    const toApproveRef = useRef<HTMLInputElement>(null);
 
-    if (!workshop_topic || !start_date || !location) {
-      setError('Please fill out all required fields.');
-      return;
-    }
+    const handleSave = useCallback(async () => {
+        const workshop_topic = workshopTopicRef.current?.value.trim();
+        const workshop_url = workshopUrlRef.current?.value.trim();
+        const coaches = coachesRef.current?.value.trim();
+        const organizer = organizerRef.current?.value.trim();
+        const location = locationRef.current?.value.trim();
+        const location_url = locationUrlRef.current?.value.trim();
+        const start_date = startDateRef.current?.value.trim();
+        const end_date = endDateRef.current?.value.trim();
+        const thumbnail_url = thumbnailUrlRef.current?.value.trim() || null;
+        const participation_condition = participationConditionRef.current?.value.trim() || null;
+        const contact = contactRef.current?.value.trim() || null;
+        const to_approve = toApproveRef.current?.checked || false;
 
-    const errMessage = 'Saving workshop data failed';
+        if (!workshop_topic || !workshop_url || !coaches || !organizer || !location || !location_url || !start_date || !end_date ) {
+            setError('Please fill out all required fields.');
+            return;
+          }
 
-    try {
-      let response;
-      const requestParams = {
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          workshop_topic, 
-          coaches, 
-          organizer, 
-          start_date, 
-          end_date, 
-          workshop_url, 
-          location, 
-          attendance_limitation,
-          category,
-          is_approved,
-          thumbnail_url,
-          participation_condition
-        }),
-      };
+        const errMessage = 'Saving workshop data failed';
 
-      if (openWithWorkshop?.workshop_id) {
-        response = await fetch(ROUTES.API.GET_WORKSHOP(openWithWorkshop.workshop_id), {
-          ...requestParams,
-          method: 'PUT',
-        });
-      } else {
-        response = await fetch(ROUTES.API.WORKSHOPS, {
-          ...requestParams,
-          method: 'POST',
-        });
-      }
+        console.log(participation_condition)
 
-      if (response && !response.ok) {
-        throw new Error(errMessage);
-      }
+        try {
+            let response;
+            const requestParams = {
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    workshop_url, 
+                    workshop_topic, 
+                    coaches, organizer, 
+                    location_url, location, 
+                    start_date, 
+                    end_date, 
+                    ...(thumbnail_url && { thumbnail_url }),
+                    ...(participation_condition && { participation_condition }),
+                    ...(contact && { contact }) 
+                }),
+            }
 
-      addToast('success', openWithWorkshop?.workshop_id ? 'Workshop updated successfully' : 'Workshop created successfully');
-      refreshWorkshops();
-      onClose();
-    } catch (error) {
-      setError(error instanceof Error ? error.message : errMessage);
-      addToast('error', error instanceof Error ? error.message : errMessage);
-    }
-  }, [onClose, openWithWorkshop, refreshWorkshops, addToast, rolesPermited, isApproved]);
+            if (openWithWorkshop?.workshop_id) {
+                response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop?.workshop_id), {
+                    ...requestParams,
+                    method: 'PUT',
+                });
+            } else {
+                console.log(workshop_url)
+                response = await fetch(ROUTES.API.WORKSHOPS, {
+                    ...requestParams,
+                    method: 'POST',
+                })
+            }
 
-  return (
-    <Modal
-      isOpen={!!openWithWorkshop}
-      onClose={onClose}
-      title={openWithWorkshop?.workshop_id ? 'Edit Workshop' : 'Add New Workshop'}
-      fullScreen={true}
-      buttons={[
-        {
-          label: 'Cancel',
-          onClick: onClose,
-          variant: 'secondary',
-        },
-        {
-          label: 'Save',
-          onClick: handleSave,
-          variant: 'primary',
-          className: !rolesPermited ? 'opacity-50 cursor-not-allowed' : '',
-        },
-      ]}
-    >
-      {error && <div className="bg-rose-600/20 text-rose-200 p-3 rounded mb-4">{error}</div>}
-      {!rolesPermited && (
-        <div className="bg-amber-600/20 text-amber-200 p-3 rounded mb-4">
-          You are in view-only mode. You do not have permission to edit workshops.
-        </div>
-      )}
-      <div className="space-y-6">
-        <Input
-          ref={workshopTopicsRef}
-          required
-          label="Workshop Topic"
-          defaultValue={openWithWorkshop?.workshop_topic}
-          disabled={!rolesPermited}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            ref={coachesRef}
-            label="Coaches"
-            defaultValue={openWithWorkshop?.coaches}
-            disabled={!rolesPermited}
-          />
-  
-          <Input
-            ref={organizerRef}
-            label="Organizer"
-            defaultValue={openWithWorkshop?.organizer}
-            disabled={!rolesPermited}
-          />
-        </div>
+            if (response && !response.ok) {
+                throw new Error(errMessage);
+            }
+
+            refreshWorkshops();
+            onClose();
+        } catch (error) {
+            setError(error instanceof Error ? error.message : errMessage);
+        } 
+    }, [onClose, openWithWorkshop, refreshWorkshops]);
+
+    const handleContestDeletation = useCallback(async () => {
+        const errMessage = 'Failed to delete the workshop';
+
+        try {
+            const response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop?.workshop_id as string), {
+                method: 'DELETE',
+              });
         
+              if (!response.ok) {
+                throw new Error(errMessage);
+              }
+        
+              refreshWorkshops();
+        }   catch (error) {
+            setError(error instanceof Error ? error.message : errMessage);
+        } finally {
+            onClose();
+            setIsConfirmationOpen(false);
+        }
+    }, [onClose, openWithWorkshop?.workshop_id, refreshWorkshops]);
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <DateInput
-            ref={startsDateRef}
-            required
-            label="Start Date"
-            defaultValue={openWithWorkshop?.start_date}
-            disabled={!rolesPermited}
-          />
+    return (
+        <>
+            <Modal
+              isOpen={isConfirmationOpen}
+              onClose={() => setIsConfirmationOpen(false)}
+              title="Confirm deletion"
+              buttons={[
+                {
+                  label: 'Cancel',
+                  onClick: () => setIsConfirmationOpen(false),
+                  variant: 'secondary',
+                },
+                {
+                  label: 'Yes, confirm',
+                  onClick: handleContestDeletation,
+                  variant: 'danger',
+                },
+              ]}
+            >
+              <h5>
+                Are you sure to remove
+                <Tooltip content={openWithWorkshop?.location_url}>
+                  <span className="font-bold text-rose-500 px-2">
+                    {openWithWorkshop?.workshop_topic}
+                  </span>
+                </Tooltip>
+                Workshop?
+              </h5>
+            </Modal>
 
-          <DateInput
-            ref={endsDateRef}
-            label="End Date"
-            defaultValue={openWithWorkshop?.end_date}
-            disabled={!rolesPermited}
-          />
-        </div>
+            <Modal
+                isOpen={!!openWithWorkshop}
+                onClose={onClose}
+                fullScreen={true}
+                title={openWithWorkshop?.workshop_id ? 'Update Content Data' : 'Add New Content'}
+                buttons={[
+                  {
+                    label: 'Delete',
+                    onClick: () => setIsConfirmationOpen(true),
+                    variant: 'danger',
+                    className: `${openWithWorkshop?.workshop_id ? '' : 'hidden'}`,
+                  },
+                  {
+                    label: 'Cancel',
+                    onClick: onClose,
+                    variant: 'secondary',
+                    className: 'justify-self-end',
+                  },
+                  {
+                    label: 'Save',
+                    onClick: handleSave,
+                    variant: 'primary',
+                  },
+                ]}
+            >
+                {isConfirmationOpen ? null : (
+                  <div className="space-y-4">
+                    {error && (
+                        <div className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-3 rounded-md mb-4">
+                          <p>{error}</p>
+                        </div>
+                    )}
+                    <Input 
+                        ref={workshopTopicRef} 
+                        required 
+                        label="Workshop Topic" 
+                        defaultValue={openWithWorkshop?.workshop_topic} 
+                    />
+        
+                    <Input
+                      ref={coachesRef}
+                      required
+                      label="Coaches"
+                      defaultValue={openWithWorkshop?.coaches}
+                    />
 
-        <Input
-          ref={locationRef}
-          required
-          label="Location"
-          defaultValue={openWithWorkshop?.location}
-          disabled={!rolesPermited}
-        />
+                    <Input
+                      ref={organizerRef}
+                      required
+                      label="Organizer"
+                      defaultValue={openWithWorkshop?.organizer}
+                    />
 
-        <Input
-          ref={attendanceLimitationRef}
-          label="Attendance Limitation"
-          defaultValue={openWithWorkshop?.attendance_limitation}
-          disabled={!rolesPermited}
-        />
+                    <InputUrl
+                      ref={workshopUrlRef}
+                      required
+                      placeholder="https://example.com"
+                      label="Workshop URL"
+                      defaultValue={openWithWorkshop?.workshop_url}
+                    />
 
-        <Input
-          ref={participationConditionRef}
-          label="Participation Condition"
-          defaultValue={openWithWorkshop?.participation_condition}
-          disabled={!rolesPermited}
-        />
+                    <Input
+                      ref={locationRef}
+                      required
+                      label="Location"
+                      defaultValue={openWithWorkshop?.location}
+                    />
 
-        <Input
-          ref={workshopUrlRef}
-          type="url"
-          label="Workshop Url"
-          defaultValue={openWithWorkshop?.workshop_url}
-          disabled={!rolesPermited}
-        />
+                    <InputUrl
+                      ref={locationUrlRef}
+                      required
+                      placeholder="https://example.com"
+                      label="Location URL"
+                      defaultValue={openWithWorkshop?.location_url}
+                    />
 
-        <Input
-          ref={thumbnailUrlRef}
-          type="url"
-          label="Thumbnail Url"
-          defaultValue={openWithWorkshop?.thumbnail_url}
-          disabled={!rolesPermited}
-        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <DateInput
+                            ref={startDateRef}
+                            label="Start date"
+                            required
+                            defaultValue={openWithWorkshop?.start_date}
+                        />
+    
+                        <DateInput
+                            ref={endDateRef}
+                            label="End date"
+                            required
+                            defaultValue={openWithWorkshop?.end_date}
+                        />
+                    </div>
 
-        <TextAreaInput
-          ref={categoryRef}
-          label="Categories"
-          rows={2}
-          defaultValue={openWithWorkshop?.category}
-          disabled={!rolesPermited}
-        />
-      </div>
-      
-      {rolesPermited && (
-          <div className="flex items-center space-x-4 py-2">
-            <label htmlFor="approve-workshop" className="text-zinc-300 font-medium">
-              Automatically approve workshop upon saving
-            </label>
-            <input
-              id="approve-workshop"
-              ref={isApprovedRef}
-              type="checkbox"
-              defaultChecked={openWithWorkshop?.is_approved === true}
-              disabled={!rolesPermited}
-              className="form-checkbox h-5 w-5 text-amber-500 rounded focus:ring-amber-500 focus:ring-offset-0 border-zinc-600 bg-zinc-700"
-            />
-          </div>
-        )}
-    </Modal>
-  );
-};
+                    <Input
+                      ref={participationConditionRef}
+                      label="Participation Condition"
+                      defaultValue={openWithWorkshop?.participation_condition}
+                    />
+
+                    <Input
+                      ref={contactRef}
+                      label="Contact"
+                      defaultValue={openWithWorkshop?.contact}
+                    />
+
+                    <InputUrl
+                      ref={thumbnailUrlRef}
+                      placeholder="https://example.com"
+                      label="Thumbnail URL"
+                      defaultValue={openWithWorkshop?.thumbnail_url}
+                    />
+                  </div>
+                )}
+            </Modal>
+        </>
+    )
+}

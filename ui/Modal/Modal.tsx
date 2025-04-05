@@ -17,11 +17,8 @@ const TransitionElements = ({ children }: { children: ReactNode }) => (
   </TransitionChild>
 );
 
-type ModalButton = {
+type ModalButton = ButtonProps & {
   label: string;
-  onClick: () => void;
-  variant?: 'primary' | 'secondary' | 'danger';
-  className?: string;
 };
 
 export type ModalProps = {
@@ -43,12 +40,11 @@ export const Modal = ({
   buttons,
   minSize = false,
 }: ModalProps) => {
-  // Define container classes based on modal size properties
-  const containerClasses = minSize
-    ? 'max-w-sm h-auto bg-zinc-800 rounded-2xl shadow-lg transform transition-all p-4'
-    : fullScreen
-    ? 'w-full max-w-full md:max-w-5xl lg:max-w-6xl bg-zinc-800 rounded-2xl shadow-lg transform transition-all overflow-hidden p-4 md:p-6 max-h-[90vh] h-auto'
-    : 'w-full bg-zinc-800 rounded-2xl shadow-lg transform transition-all overflow-hidden md:max-w-2xl md:p-6 md:rounded-2xl sm:p-6 sm:relative sm:inset-auto sm:max-w-xl sm:rounded-2xl sm:transform sm:transition-all sm:m-auto sm:h-auto sm:max-h-[90vh]';
+  const containerClasses = minSize 
+  ? 'max-w-sm h-auto bg-zinc-800 rounded-2xl shadow-lg transform transition-all p-4' 
+  : fullScreen 
+  ? 'w-full max-w-[1400px] h-[95vh] bg-zinc-800 rounded-2xl shadow-lg transform transition-all overflow-hidden p-4 md:p-6' 
+  : 'w-full bg-zinc-800 rounded-2xl shadow-lg transform transition-all overflow-hidden md:max-w-2xl md:p-6 md:rounded-2xl sm:p-6 sm:relative sm:inset-auto sm:max-w-xl sm:rounded-2xl sm:transform sm:transition-all sm:m-auto sm:h-auto sm:max-h-[90vh]';
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -56,7 +52,7 @@ export const Modal = ({
         <TransitionElements>
           <div className="fixed inset-0 bg-zinc-950 bg-opacity-70" aria-hidden="true" />
         </TransitionElements>
-        <div className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4">
+        <div className="fixed inset-0 flex items-center justify-center">
           <TransitionElements>
             <div className={containerClasses}>
               <div className="flex justify-between items-center border-b border-zinc-700 p-4 md:p-6">
@@ -65,16 +61,11 @@ export const Modal = ({
                   <XMarkIcon className="w-5 h-5" />
                 </IconButton>
               </div>
-              {children && <div className="p-4 md:p-6 text-zinc-300 modal-scrollbar overflow-y-auto max-h-[60vh]">{children}</div>}
+              {children && <div className="p-4 md:p-6 text-zinc-300">{children}</div>}
               {buttons && (
                 <div className="flex gap-3 p-4 justify-center md:p-6 border-t border-zinc-700">
                   {buttons.map((button, index) => (
-                    <Button 
-                      key={index} 
-                      onClick={button.onClick} 
-                      variant={button.variant} 
-                      className={button.className}
-                    >
+                    <Button key={index} {...button}>
                       {button.label}
                     </Button>
                   ))}

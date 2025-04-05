@@ -3,8 +3,8 @@ import { apiClient } from '../../apiClient';
 
 const authRequired = true;
 
-export async function GET({ params }: { params: { user_id: string } }) {
-  const { user_id } = params;
+export async function GET(req: NextRequest, { params }: { params: Promise<{ user_id: string }> }) {
+  const { user_id } = await params;
   if (!user_id) {
     return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
   }

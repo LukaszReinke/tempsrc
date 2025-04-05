@@ -69,7 +69,7 @@ export const MembersTable = () => {
     ],
     handleRowClick: () =>
       user?.user_id !== u.user_id
-        ? rolesPermited && setModalOpenWithUser(user)
+        ? rolesPermited && setModalOpenWithUser(u)
         : redirect(ROUTES.CREW_EDIT_PROFILE),
   }));
 

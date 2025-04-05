@@ -13,6 +13,10 @@ export const DateInput = (props: InputProps) => {
       value = value.slice(0, 5) + '.' + value.slice(5);
     }
 
+    if (value.length > 10) {
+      value = value.slice(0, 10);
+    }
+
     e.target.value = value;
   };
 
@@ -24,6 +28,7 @@ export const DateInput = (props: InputProps) => {
       onChange={handleChange}
       placeholder="DD.MM.YYYY"
       pattern="\d{2}\.\d{2}\.\d{4}"
+      maxLength={10}
     />
   );
 };

@@ -27,12 +27,13 @@ export const ROUTES = {
     LOGOUT: '/api/logout',
     CONTESTS: '/api/contests',
     WORKSHOPS: '/api/workshops',
+    PROFILE: '/api/profile',
     CONTESTS_ALL: '/api/contests/all',
     WORKSHOPS_ALL: '/api/workshops/all',
-    PROFILE: '/api/profile',
+
+    CONTEST: (contest_id: string) => `/api/cotests/${contest_id}`,
+    WORKSHOP: (workshop_id: string) => `/api/workshops/${workshop_id}`,
 
     GET_USER: (user_id: string) => `/api/users/${user_id}`,
-    GET_CONTEST: (contest_id: string) => `/api/contests/${contest_id}`,
-    GET_WORKSHOP: (workshop_id: string) => `/api/workshops/${workshop_id}`,
   },
 };

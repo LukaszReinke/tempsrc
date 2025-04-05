@@ -5,13 +5,9 @@ import { GOOGLE_MAP_REGEX } from '@hd/consts';
 import { MapPinIcon } from '@heroicons/react/24/outline';
 import { UrlInput } from '@hd/components';
 
-type LocationInputProps = {
-  customRegex?: RegExp;
-};
-
 const MAP_URL_ERROR = 'Invalid URL. Please enter a valid Google Maps link.';
 
-export const LocationInput = (props: InputProps & LocationInputProps) => (
+export const LocationInput = (props: InputProps) => (
   <UrlInput
     {...props}
     customRegex={GOOGLE_MAP_REGEX}

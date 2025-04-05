@@ -1,5 +1,5 @@
 import { ContestsTable } from '@hd/components';
 
-export default async function ContestManagementPage() {
+export default async function ContestsPage() {
   return <ContestsTable />;
 }

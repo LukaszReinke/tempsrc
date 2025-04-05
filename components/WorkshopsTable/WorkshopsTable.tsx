@@ -1,103 +1,112 @@
 'use client';
 
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState, Fragment, useCallback } from 'react';
 import { Transition } from '@headlessui/react';
-import { Workshop } from '@hd/types/Workshop';
-import { Input, ContentLoader } from '@hd/ui';
-import { ROUTES } from '@hd/consts';
-import { FormWorkshopModal, Table } from '@hd/components';
-import { exampleWorkshops } from './exampleWorkshops';
+import { WorkshopsGET, WorkshopApiResponse } from '@hd/types';
+import { ContentLoader, IconButton, Tooltip } from '@hd/ui';
+import { Table, FormWorkshopModal } from '@hd/components';
+import { PlusIcon } from '@heroicons/react/24/outline';
+import { ROUTES, SYSTEM_ROLES } from '@hd/consts';
+import { useUser } from '@hd/context';
 
 export const WorkshopsTable = () => {
-  const [workshops, setWorkshops] = useState<Workshop[]>([]);
-  const [filter, setFilter] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [modalOpenWithWorkshop, setModalOpenWithWorkshop] = useState<Workshop | null>(null);
+    const [workshops, setWorkshops] = useState<WorkshopsGET[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [modalOpenWithWorkshop, setModalOpenWithWorkshop] = useState<null | WorkshopsGET>(null);
 
-  const fetchWorkshops = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(ROUTES.API.WORKSHOPS_ALL);
-      if (!response.ok) throw new Error('Failed to fetch workshops');
-      const data = await response.json();
-      
-      // Sprawdzenie czy data jest tablicą
-      if (Array.isArray(data)) {
-        setWorkshops(data);
-        // FIXME: Jeśli brak danych z API, używamy mockowanych danych
-        if (data.length === 0) {
-          setWorkshops(exampleWorkshops);
+    const { user } = useUser();
+
+    const rolesPermited =
+        user?.role === SYSTEM_ROLES.ADMIN ||
+        user?.role === SYSTEM_ROLES.SUPER_ADMIN ||
+        user?.role === SYSTEM_ROLES.EVENT_MOD;
+
+    const fetchWorkshops = useCallback(async () => {
+        try {
+          setLoading(true);
+          const response = await fetch(ROUTES.API.WORKSHOPS_ALL);
+          if (!response.ok) {
+            throw new Error('Failed to fetch users');
+          }
+          const data: WorkshopApiResponse  = await response.json();
+          setWorkshops(data.data.items);
+        } catch (error) {
+          console.error('Error fetching users:', error);
+        } finally {
+          setLoading(false);
         }
-      } else {
-        console.error('API returned non-array data:', data);
-        // FIXME: Dane z API nie są tablicą, używamy mockowanych danych
-        setWorkshops(exampleWorkshops);
-      }
-      
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching workshops:', error);
-      // FIXME: W przypadku błędu ustawiamy mockowane dane
-      setWorkshops(exampleWorkshops);
-      setLoading(false);
-    }
-  };
+      }, []);
 
-  useEffect(() => {
-    fetchWorkshops();
-  }, []);
+      useEffect(() => {
+        fetchWorkshops();
+        }, [fetchWorkshops]);
 
-  const filteredWorkshops = workshops.filter((workshop) => {
-    if (!workshop) return false;
-    return `${workshop.workshop_topic || ''} ${workshop.location || ''} ${workshop.start_date || ''} ${workshop.end_date || ''}`
-      .toLowerCase()
-      .includes(filter.toLowerCase());
-  });
+        const headers = [{ label: 'Workshop Topic' }, { label: 'Organizer' }, { label: 'Coaches' }, { label: 'Location' }, { label: 'Date' }, { label: 'Participation Condition' }];
 
-  const headers = [
-    { label: 'Workshop Topic' },
-    { label: 'Location' },
-    { label: 'Start Date' },
-    { label: 'End Date' },
-  ];
+        const rows = workshops.map((w) => ({
+            columns: [
+                <div
+                    key={w.workshop_id}
+                    className={`flex items-center pl-6`}
+                    >
+                    {w.workshop_topic}
+                </div>,
+                w.organizer,
+                w.coaches,
+                <div key={`location-${w.workshop_id}`}>
+                    <Tooltip content={w.location_url} isUrl={true}>
+                        <span className=" px-2">
+                          {w.location}
+                        </span>
+                    </Tooltip>
+                </div>,
+                <div key={`date-${w.workshop_id}`}>
+                    {`${w.start_date} - ${w.end_date}`} 
+                </div>,
+                w.participation_condition
+            ],
+            handleRowClick: () =>
+                setModalOpenWithWorkshop(w)
+        }));
 
-  const rows = filteredWorkshops.map((workshop) => ({
-    columns: [
-      workshop.workshop_topic,
-      workshop.location,
-      workshop.start_date,
-      workshop.end_date,
-    ],
-    handleRowClick: () => setModalOpenWithWorkshop(workshop),
-  }));
-
-  return (
-    <>
-      <FormWorkshopModal 
-        onClose={() => setModalOpenWithWorkshop(null)}
-        refreshWorkshops={fetchWorkshops}
-        openWithWorkshop={modalOpenWithWorkshop}
-      />
-      
-      <div className="mb-4">
-        <Input
-          placeholder="Search workshops..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-      </div>
-
-      {loading ? (
-        <ContentLoader />
-      ) : filteredWorkshops.length === 0 ? (
-        <div className="text-center py-4 text-gray-500">
-          No workshops found...
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <Table headers={headers} rows={rows} />
-        </div>
-      )}
-    </>
-  );
+        return (
+            <>
+            <FormWorkshopModal
+                onClose={() => setModalOpenWithWorkshop(null)}
+                openWithWorkshop={modalOpenWithWorkshop}
+                refreshWorkshops={fetchWorkshops}
+                />
+            <div className="w-full">
+                <IconButton
+                    disabled={!rolesPermited}
+                    onClick={() => setModalOpenWithWorkshop({} as WorkshopsGET)}
+                    tooltip="Add new workshop"
+                    >
+                    <PlusIcon className="w-10 h-10 text-amber-600" />
+                </IconButton>
+                {loading ? (
+                    <ContentLoader />
+                ) : workshops.length === 0 ? (
+                    <p className="text-center text-white">No workshops found...</p>
+                ) : (
+                    <Transition
+                        as={Fragment}
+                        appear={true}
+                        show={!loading}
+                        enter="transition-opacity duration-500"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="transition-opacity duration-500"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="overflow-x-auto">
+                            <Table headers={headers} rows={rows} />
+                        </div>
+                    </Transition>
+                )}
+            </div>
+            </>
+            
+        );
 };

@@ -5,13 +5,11 @@ import { IconButton, NavButton } from '@hd/ui';
 import { Disclosure } from '@headlessui/react';
 import {
   Bars4Icon,
-  CalendarDaysIcon,
+  TrophyIcon,
+  SparklesIcon,
   EnvelopeOpenIcon,
   UserGroupIcon,
   UserIcon,
-  TrophyIcon,
-  WrenchScrewdriverIcon,
-  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -83,7 +81,7 @@ const NAVIGATION_LINKS = [
     href: ROUTES.CREW_CONTEST_MANAGEMENT,
     children: (
       <>
-        <TrophyIcon className={LINK_ICON_STYLES} />
+        <TrophyIcon  className={LINK_ICON_STYLES} />
         <span className={LINK_LABEL_STYLES}>Contests</span>
       </>
     ),

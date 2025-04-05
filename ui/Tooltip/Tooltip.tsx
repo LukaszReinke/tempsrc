@@ -6,16 +6,24 @@ interface TooltipProps {
   children: ReactNode;
   content: ReactNode;
   position?: 'top' | 'bottom' | 'left' | 'right';
+  isUrl?: boolean;
 }
 
-export const Tooltip = ({ children, content, position = 'top' }: TooltipProps) => {
+export const Tooltip = ({ children, content, position = 'top', isUrl = false }: TooltipProps) => {
   const [isVisible, setIsVisible] = useState(false);
+
+  const handleClick = () => {
+    if (isUrl && typeof content === 'string') {
+      window.open(content, '_blank', 'noopener,noreferrer');
+    } else {
+      setIsVisible(false);
+    }
+  };
 
   return (
     <div
       className="relative inline-block"
       onMouseEnter={() => setIsVisible(true)}
-      onClick={() => setIsVisible(false)}
       onMouseLeave={() => setIsVisible(false)}
     >
       {children}
@@ -30,7 +38,8 @@ export const Tooltip = ({ children, content, position = 'top' }: TooltipProps) =
               : position === 'left'
                 ? 'right-full top-1/2 transform -translate-y-1/2 mr-2'
                 : 'left-full top-1/2 transform -translate-y-1/2 ml-2'
-        }`}
+        } ${isUrl ? 'cursor-pointer hover:underline hover:text-blue-300' : ''}`}
+        onClick={handleClick}
       >
         {content}
       </div>

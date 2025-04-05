@@ -1,93 +1,156 @@
 'use client';
 
-import React, { useRef } from 'react';
-import { Input } from '@hd/ui';
+import { useCallback, useRef, useState } from 'react';
+import { Button, Input, Switch } from '@hd/ui';
+import { UrlInput, DateInput, LocationInput } from '@hd/components';
+import { Transition } from '@headlessui/react';
+import { WorkshopPOST } from '@hd/types';
+import { API_GENERIC_ERROR } from './const';
+import { ROUTES } from '@hd/consts';
 
 export const FormWorkshopReport = () => {
-  // Create refs for the uncontrolled inputs
-  const urlRef = useRef<HTMLInputElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
-  const contactRef = useRef<HTMLInputElement>(null);
-  const categoriesRef = useRef<HTMLInputElement>(null);
-  const placeRef = useRef<HTMLInputElement>(null);
-  const dateRef = useRef<HTMLInputElement>(null);
-  const timeRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<null | string>(null);
+  const [isOrganizerChecked, setIsOrganizerChecked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const workshopUrlRef = useRef<HTMLInputElement>(null);
+  const workshopTopicRef = useRef<HTMLInputElement>(null);
+  const locationUrlRef = useRef<HTMLInputElement>(null);
+  const coachesRef = useRef<HTMLInputElement>(null);
+  const startDateRef = useRef<HTMLInputElement>(null);
+  const endDateRef = useRef<HTMLInputElement>(null);
+  const organizerRef = useRef<HTMLInputElement>(null);
+  const contactRef = useRef<HTMLInputElement>(null);
+  const thumbnailUrlRef = useRef<HTMLInputElement>(null);
+  const participationConditionRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = useCallback(async (event: React.FormEvent) => {
+    setIsLoading(true);
     event.preventDefault();
 
-    // Accessing the values of the uncontrolled inputs
-    const url = urlRef.current?.value;
-    const name = nameRef.current?.value;
-    const contact = contactRef.current?.value;
-    const categories = categoriesRef.current?.value;
-    const place = placeRef.current?.value;
-    const date = dateRef.current?.value;
-    const time = timeRef.current?.value;
+    const body = {
+      workshop_url: workshopUrlRef.current?.value,
+      workshop_topic: workshopTopicRef.current?.value,
+      location_url: locationUrlRef.current?.value,
+      coaches: coachesRef.current?.value,
+      start_date: startDateRef.current?.value,
+      end_date: endDateRef.current?.value,
+      organizer: organizerRef.current?.value,
+      contact: contactRef.current?.value,
+      thumbnail_url: contactRef.current?.value,
+      participation_condition: participationConditionRef.current?.value,
+    } as WorkshopPOST;
 
-    // For now, just log the values to console (you can send them to your server here)
-    console.log('URL:', url);
-    console.log('Name:', name);
-    console.log('Contact:', contact);
-    console.log('Categories:', categories);
-    console.log('Place:', place);
-    console.log('Date:', date);
-    console.log('Time:', time);
-  };
+    if (
+      !body.workshop_url ||
+      !body.workshop_topic ||
+      !body.location_url ||
+      !body.coaches ||
+      !body.start_date
+    ) {
+      setError(`All fields marked with '*' are required.`);
+      return;
+    }
+
+    try {
+      const response = await fetch(ROUTES.API.WORKSHOPS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || API_GENERIC_ERROR);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : API_GENERIC_ERROR);
+    }
+    setIsLoading(false);
+  }, []);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 p-10 rounded-xl bg-zinc-950/50 shadow-lg">
-      <Input
-        id="url"
-        label="Event official website"
-        ref={urlRef}
-        placeholder="Enter the event URL"
+      <UrlInput
+        label="Workshop's website / Social media page"
+        ref={workshopUrlRef}
+        placeholder="Enter the workshop's URL"
+        required
       />
 
-      <Input label="Event name" id="name" ref={nameRef} placeholder="Enter the event name" />
+      <LocationInput ref={locationUrlRef} required label="Google Maps Location" />
 
       <Input
-        label="Contact data"
-        id="contact"
-        ref={contactRef}
-        placeholder="Enter your contact info - email or phone number"
+        label="Event name"
+        ref={workshopTopicRef}
+        required
+        placeholder="Workshop topic / name"
       />
 
-      <Input
-        label="Categories"
-        id="categories"
-        ref={categoriesRef}
-        placeholder="Enter categories (comma separated)"
-      />
+      <Input label="Coaches" required ref={coachesRef} placeholder="Coaches (comma separated)" />
 
-      <div>
-        <label htmlFor="place" className="block text-sm font-medium text-gray-700">
-          Place
-        </label>
-        <Input
-          id="place"
-          ref={placeRef}
-          type="text"
-          className="mt-1 block w-full"
-          placeholder="Enter the event place"
+      <div className="flex gap-6 sm:gap-3 flex-col sm:flex-row">
+        <DateInput label="Start date" required ref={startDateRef} />
+        <DateInput label="End date - if differs" ref={endDateRef} />
+      </div>
+
+      <Input label="Organizer" required ref={organizerRef} placeholder="Organizer or club name" />
+
+      <div className="flex pt-2">
+        <Switch
+          onChange={() => setIsOrganizerChecked((prev) => !prev)}
+          checked={isOrganizerChecked}
         />
+        <div
+          className={`pl-3 font-semibold transition-colors duration-300 ${
+            isOrganizerChecked ? '' : 'text-zinc-400'
+          }`}
+        >
+          {`I'm an `}
+          <span
+            className={`transition-colors duration-200 ${
+              isOrganizerChecked ? 'text-amber-500' : ''
+            }`}
+          >
+            organizer
+          </span>
+          {` and want to provide more data`}
+        </div>
       </div>
 
-      <Input label="Date" id="date" ref={dateRef} type="date" className="mt-1 block w-full" />
+      <Transition
+        show={isOrganizerChecked}
+        enter="transition ease-out duration-400 transform"
+        enterFrom="opacity-0 -translate-y-2"
+        enterTo="opacity-100 translate-y-0"
+        leave="transition ease-in duration-300 transform"
+        leaveFrom="opacity-100 translate-y-0"
+        leaveTo="opacity-0 -translate-y-2"
+      >
+        <div className="space-y-6">
+          <Input
+            label="Contact data"
+            ref={contactRef}
+            placeholder="Enter your contact info - email or phone number"
+          />
 
-      {/* Time Field */}
-      <div>
-        <label htmlFor="time" className="block text-sm font-medium text-gray-700">
-          Time
-        </label>
-        <Input id="time" ref={timeRef} type="time" className="mt-1 block w-full" />
-      </div>
+          <UrlInput
+            label="Thumbail URL (vertical aspect ratio prefered)"
+            ref={thumbnailUrlRef}
+            placeholder="Provide prefered thumbnail / poster URL"
+          />
 
-      {/* Submit Button */}
-      <div className="flex justify-end">
-        <button type="submit" className="px-4 py-2 text-white bg-blue-500 rounded-md">
+          <Input
+            label="Conditional participation"
+            required
+            ref={participationConditionRef}
+            placeholder="Is dedicated for a specific level / club only?"
+          />
+        </div>
+      </Transition>
+      <div className="flex justify-center">
+        <Button loading={isLoading} type="submit" size="lg">
           Submit
-        </button>
+        </Button>
       </div>
     </form>
   );

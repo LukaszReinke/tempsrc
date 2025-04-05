@@ -2,13 +2,12 @@
 
 import { FormWorkshopReport, LinkCard, FormContestReport } from '@hd/components';
 import { EXTERNAL_WEB_URLS } from '@hd/consts';
+import { Timeline } from '@hd/types';
 import { LinkText } from '@hd/ui';
 import { useState } from 'react';
 
-type FormType = 'workshop' | 'contest';
-
 export default function ContactPage() {
-  const [formState, setFormState] = useState<FormType | null>(null);
+  const [formState, setFormState] = useState<Timeline | null>(null);
 
   return (
     <div className="min-h-screen bg-zinc-900 text-zinc-200 relative">

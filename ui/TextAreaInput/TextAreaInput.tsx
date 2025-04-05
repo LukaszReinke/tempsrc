@@ -14,7 +14,7 @@ export const TextAreaInput = (props: TextAreaProps) => {
   return (
     <div>
       {props.label && (
-        <label htmlFor={props.name} className="block font-medium text-zinc-300">
+        <label htmlFor={props.name} className="block font-semibold text-zinc-300">
           {props.label} {props.required && <span className="text-amber-500">*</span>}
         </label>
       )}

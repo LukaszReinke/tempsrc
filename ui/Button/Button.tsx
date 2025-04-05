@@ -13,6 +13,8 @@ export type ButtonProps = {
 } & HDButtonProps;
 
 export const Button = (props: ButtonProps) => {
+  const { loading, ...buttonProps } = props;
+
   const getSize = (): string => {
     switch (props.size) {
       case 'sm':
@@ -43,17 +45,17 @@ export const Button = (props: ButtonProps) => {
 
   return (
     <HUButton
-      {...props}
-      disabled={props.loading}
+      {...buttonProps}
+      disabled={loading}
       className={`rounded-lg hover:opacity-85 flex justify-center ${props?.fullWidth ? 'w-full' : ''} ${
         !props.isCustom ? 'text-white shadow-lg' : ''
       } ${!props.isCustom ? getSize() : ''} ${
         !props.isCustom ? getVariant() : ''
-      } ${props.disabled || props.loading ? disabledStyles : ''} ${props?.className}`}
+      } ${props.disabled || loading ? disabledStyles : ''} ${props?.className}`}
     >
       <div className="flex items-center">
         {props.children}
-        {props.loading && <Spinner />}
+        {loading && <Spinner />}
       </div>
     </HUButton>
   );

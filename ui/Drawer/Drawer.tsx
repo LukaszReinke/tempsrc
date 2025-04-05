@@ -45,7 +45,7 @@ export const Drawer = (props: Props) => {
                 <DialogPanel
                   className={classNames(
                     'pointer-events-auto relative w-screen max-w-md transform transition-all',
-                    BG_COLORS.DRAWER
+                    BG_COLORS.DRAWER,
                   )}
                 >
                   <div className="flex justify-end pt-9 pr-10">
@@ -53,7 +53,7 @@ export const Drawer = (props: Props) => {
                       <XMarkIcon className="h-6 w-6" />
                     </IconButton>
                   </div>
-                  <div className="flex h-full flex-col overflow-y-scroll py-6 shadow-xl">
+                  <div className="flex h-full flex-col py-6 shadow-xl">
                     {props.title && (
                       <div className="px-4 sm:px-6 flex">
                         <DialogTitle className="text-base font-semibold text-gray-900">

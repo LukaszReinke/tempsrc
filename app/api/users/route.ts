@@ -11,7 +11,6 @@ export async function GET() {
   }
 }
 
-// FIXME: placeholder - todo: adjust body
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

@@ -13,3 +13,4 @@ export * from './TransitionLink';
 export * from './Switch';
 export * from './Select';
 export * from './Loaders';
+export * from './InputUrl';
