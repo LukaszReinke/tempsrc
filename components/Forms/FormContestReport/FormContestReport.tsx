@@ -7,10 +7,9 @@ import { Transition } from '@headlessui/react';
 import { ROUTES } from '@hd/consts';
 import { API_GENERIC_ERROR } from './const';
 import { ContestsPOST } from '@hd/types';
+import { toast } from 'react-toastify';
 
 export const FormContestReport = () => {
-  // TODO: on release of TOAST CONTEXT
-  const [error, setError] = useState<null | string>(null);
   const [isOrganizerChecked, setIsOrganizerChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -25,7 +24,6 @@ export const FormContestReport = () => {
   const thumbnailUrlRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = useCallback(async (event: React.FormEvent) => {
-    setIsLoading(true);
     event.preventDefault();
 
     const body = {
@@ -37,7 +35,7 @@ export const FormContestReport = () => {
       end_date: endDateRef.current?.value,
       federation: federationRef.current?.value,
       contact: contactRef.current?.value,
-      thumbnail_url: contactRef.current?.value,
+      thumbnail_url: thumbnailUrlRef.current?.value,
     } as ContestsPOST;
 
     if (
@@ -47,28 +45,44 @@ export const FormContestReport = () => {
       !body.categories ||
       !body.start_date
     ) {
-      setError(`All fields marked with '*' are required.`);
+      toast.error(`All fields marked with '*' are required.`);
       return;
     }
 
+    setIsLoading(true);
+
     try {
-      const response = await fetch(ROUTES.API.CONTESTS, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      await toast.promise(
+        (async () => {
+          const response = await fetch(ROUTES.API.CONTESTS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || API_GENERIC_ERROR);
+        })(),
+        {
+          pending: 'Submitting contest report...',
+          success: 'Contest reported successfully! Redirecting...',
+          error: 'Submission failed. Please try again later.',
+        },
+      );
 
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.error || API_GENERIC_ERROR);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : API_GENERIC_ERROR);
+      setTimeout(() => {
+        window.location.href = ROUTES.HOME;
+      }, 1500);
+    } catch (error) {
+      console.error(error);
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-10 rounded-xl bg-zinc-950/50 shadow-lg">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6 p-4 md:p-10 rounded-xl bg-zinc-950/50 shadow-lg"
+    >
       <UrlInput
         label="Contest official website / Social media event page"
         ref={urlRef}

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { apiClient } from '../../apiClient';
-
-const authRequired = true;
+import { apiClient, authRequired } from '../../apiClient';
 
    export async function GET(req: NextRequest, { params }: { params: Promise<{ contest_id: string }> }) {
     const { contest_id } = await params;
@@ -59,7 +57,7 @@ const authRequired = true;
       return NextResponse.json({ error: 'Contest ID is required' }, { status: 400 });
     }
     try {
-      const contest = await apiClient(`contests/${contest_id}/approve`, { method: 'GET', authRequired });
+      const contest = await apiClient(`contests/${contest_id}/approve`, { method: 'PATCH', authRequired });
       return NextResponse.json(contest);
     } catch (error) {
       console.error('Error fetching contest:', error);

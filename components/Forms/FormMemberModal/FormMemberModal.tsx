@@ -15,7 +15,7 @@ type MemberModalFormProps = {
 };
 
 export const FormMemberModal = ({ openWithUser, onClose, refreshUsers }: MemberModalFormProps) => {
-  // TODO: TOAST ERROR CONTEXT
+  // TODO: implement this with react toastify instead of state
   const [error, setError] = useState<string | null>(null);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const { user } = useUser();
@@ -83,7 +83,7 @@ export const FormMemberModal = ({ openWithUser, onClose, refreshUsers }: MemberM
         throw new Error(errMessage);
       }
 
-      // TODO: after implementing toast context enable
+      // TODO: after implementing toast  enabled
       refreshUsers();
     } catch (error) {
       setError(error instanceof Error ? error.message : errMessage);

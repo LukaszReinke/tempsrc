@@ -7,6 +7,7 @@ import { Transition } from '@headlessui/react';
 import { WorkshopPOST } from '@hd/types';
 import { API_GENERIC_ERROR } from './const';
 import { ROUTES } from '@hd/consts';
+import { toast } from 'react-toastify';
 
 export const FormWorkshopReport = () => {
   const [error, setError] = useState<null | string>(null);
@@ -53,23 +54,39 @@ export const FormWorkshopReport = () => {
     }
 
     try {
-      const response = await fetch(ROUTES.API.WORKSHOPS, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      await toast.promise(
+        (async () => {
+          const response = await fetch(ROUTES.API.WORKSHOPS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || API_GENERIC_ERROR);
+          }
+        })(),
+        {
+          pending: 'Submitting workshop report...',
+          success: 'Workshop reported successfully! Redirecting...',
+          error: 'Submission failed. Please try again later.',
+        },
+      );
 
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.error || API_GENERIC_ERROR);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : API_GENERIC_ERROR);
+      setTimeout(() => {
+        window.location.href = ROUTES.HOME;
+      }, 1500);
+    } catch (error) {
+      console.error(error);
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-10 rounded-xl bg-zinc-950/50 shadow-lg">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6 p-4 md:p-10 rounded-xl bg-zinc-950/50 shadow-lg"
+    >
       <UrlInput
         label="Workshop's website / Social media page"
         ref={workshopUrlRef}
@@ -93,7 +110,7 @@ export const FormWorkshopReport = () => {
         <DateInput label="End date - if differs" ref={endDateRef} />
       </div>
 
-      <Input label="Organizer" required ref={organizerRef} placeholder="Organizer or club name" />
+      <Input label="Organizer" ref={organizerRef} placeholder="Organizer or club name" />
 
       <div className="flex pt-2">
         <Switch

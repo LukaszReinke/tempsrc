@@ -17,9 +17,9 @@ export type WorkshopPOST = {
   location_url: string;
   coaches: string;
   start_date: string;
-  end_date: string;
-  organizer: string;
 
+  end_date?: string;
+  organizer?: string;
   thumbnail_url?: string;
   participation_condition?: string;
   contact?: string;

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { apiClient } from '../../apiClient';
+import { apiClient, authRequired } from '../../apiClient';
 
-const authRequired = true;
 
    export async function GET(req: NextRequest, { params }: { params: Promise<{ workshop_id: string }> }) {
     const { workshop_id } = await params;

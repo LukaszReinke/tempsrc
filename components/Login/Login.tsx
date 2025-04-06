@@ -2,50 +2,55 @@
 
 import { ROUTES } from '@hd/consts';
 import { useUser } from '@hd/context';
-import { Button, Input, LinkText, Toast } from '@hd/ui';
+import { Button, Input, LinkText } from '@hd/ui';
 import { useRef, useState } from 'react';
+import { toast } from 'react-toastify';
 
-type LoginProps = {
-  error?: null | string;
-};
-
-export const Login = (props: LoginProps) => {
+export const Login = () => {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(props.error ? props.error : null);
   const { login } = useUser();
 
   const handleLogin = async (e: React.FormEvent) => {
-    setLoading(true);
     e.preventDefault();
-
     const email = emailRef.current?.value;
     const password = passwordRef.current?.value;
 
     if (!email || !password) {
-      setError('Both fields are required.');
+      toast.error(`Both fields marked with '*' are required`);
       return;
     }
 
+    setLoading(true);
+
     try {
-      const response = await fetch(ROUTES.API.LOGIN, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      await toast.promise(
+        (async () => {
+          const response = await fetch(ROUTES.API.LOGIN, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
 
-      const data = await response.json();
+          const data = await response.json();
 
-      if (!response.ok) throw new Error(data.error || 'Login failed');
+          if (!response.ok) throw new Error(data.error || 'Login failed');
 
-      login(data.user);
-
-      window.location.href = ROUTES.CREW_DASHBOARD;
+          login(data.user);
+          window.location.href = ROUTES.CREW_DASHBOARD;
+        })(),
+        {
+          pending: 'Signing in...',
+          success: 'Login successful! Redirecting...',
+          error: 'Login failed. Please check your credentials.',
+        },
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to login');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -58,19 +63,15 @@ export const Login = (props: LoginProps) => {
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
         <form className="space-y-5" onSubmit={handleLogin}>
-          <Input ref={emailRef} label="Email" placeholder="Email address" />
+          <Input ref={emailRef} required label="Email" placeholder="Email address" />
           <Input
+            required
             ref={passwordRef}
             label="Password"
             type="password"
             placeholder="Account password"
           />
 
-          {error && (
-            <Toast type="error" handleToastClose={() => setError(null)}>
-              {error}
-            </Toast>
-          )}
           <div>
             <Button type="submit" loading={loading} className="w-full mt-2 flex">
               Sign in

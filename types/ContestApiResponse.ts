@@ -1,3 +1,3 @@
 import { ContestsGET, ApiResponse } from '@hd/types';
 
-export type ContestApiResponse = ApiResponse<ContestsGET>;
+export type ContestsGetApiResponse = ApiResponse<ContestsGET>;

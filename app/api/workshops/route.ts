@@ -12,17 +12,22 @@ export async function GET() {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
+  const body = await req.json();
+
   try {
-    const body = await req.json();
-    const newContest = await apiClient('workshops', {
+    await apiClient('workshops', {
       method: 'POST',
       body: JSON.stringify(body),
-      authRequired,
     });
-    return NextResponse.json(newContest, { status: 201 })
+
+    const response = NextResponse.json({
+      message: 'Workshop successfully reported',
+    });
+
+    return response;
   } catch (error) {
-    console.error('Error creating workshop:', error);
-    return NextResponse.json({ error: 'Failed to create workshop' }, { status: 500 });
+    console.error('Error on workshop POST:', error);
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }

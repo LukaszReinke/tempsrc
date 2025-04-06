@@ -1,3 +1,3 @@
 import { WorkshopsGET, ApiResponse } from '@hd/types';
 
-export type WorkshopApiResponse = ApiResponse<WorkshopsGET>;
+export type WorkshopsGetApiResponse = ApiResponse<WorkshopsGET>;

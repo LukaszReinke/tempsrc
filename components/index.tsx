@@ -20,3 +20,4 @@ export * from './ListItem';
 export * from './LoaderWrapper';
 export * from './ContestsTable';
 export * from './WorkshopsTable';
+export * from './EventStatus';

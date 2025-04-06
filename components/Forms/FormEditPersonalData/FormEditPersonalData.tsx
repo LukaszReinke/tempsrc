@@ -63,7 +63,7 @@ export const FormEditPersonalData = () => {
       last_name,
       phone_number,
       password: current_password,
-      new_password: new_password || undefined, // Include only if provided
+      new_password: new_password || undefined,
     };
 
     try {
@@ -81,7 +81,6 @@ export const FormEditPersonalData = () => {
 
       const updatedUserData = await response.json();
       setUserData(updatedUserData);
-      alert('Profile updated successfully.');
       setIsConfirmationOpen(false);
     } catch (error) {
       console.error('Error updating personal data:', error);

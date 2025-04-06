@@ -1,266 +1,285 @@
 'use client';
 
-import { DateInput } from '@hd/components/DateInput';
+import { DateInput, LocationInput, UrlInput } from '@hd/components';
 import { ROUTES } from '@hd/consts';
-import { SYSTEM_ROLES, SYSTEM_ROLES_SELECT_OPTIONS } from '@hd/consts';
-import { useUser } from '@hd/context';
 import { WorkshopsGET } from '@hd/types';
-import { Input, Modal, Select, SelectOption, Tooltip, InputUrl } from '@hd/ui';
-import { getLabelByValue } from '@hd/utils';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { Input, Modal, Tooltip, Switch } from '@hd/ui';
+import { useCallback, useRef, useState } from 'react';
+import { toast } from 'react-toastify';
 
 type WorkshopModalFormProps = {
-    openWithWorkshop: null | WorkshopsGET;
-    onClose: () => void;
-    refreshWorkshops: () => void;
-  };
+  openWithWorkshop: null | WorkshopsGET;
+  onClose: () => void;
+  refreshWorkshops: () => void;
+};
 
-  export const FormWorkshopModal = ({ openWithWorkshop, onClose, refreshWorkshops}: WorkshopModalFormProps) => {
+export const FormWorkshopModal = ({
+  openWithWorkshop,
+  onClose,
+  refreshWorkshops,
+}: WorkshopModalFormProps) => {
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [isAproveWorkshopChecked, setAproveWorkshopChecked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const [error, setError] = useState<string | null>(null);
-    const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const workshopTopicRef = useRef<HTMLInputElement>(null);
+  const workshopUrlRef = useRef<HTMLInputElement>(null);
+  const coachesRef = useRef<HTMLInputElement>(null);
+  const organizerRef = useRef<HTMLInputElement>(null);
+  const locationRef = useRef<HTMLInputElement>(null);
+  const locationUrlRef = useRef<HTMLInputElement>(null);
+  const startDateRef = useRef<HTMLInputElement>(null);
+  const endDateRef = useRef<HTMLInputElement>(null);
+  const thumbnailUrlRef = useRef<HTMLInputElement>(null);
+  const participationConditionRef = useRef<HTMLInputElement>(null);
+  const contactRef = useRef<HTMLInputElement>(null);
 
-    const workshopTopicRef = useRef<HTMLInputElement>(null);
-    const workshopUrlRef = useRef<HTMLInputElement>(null);
-    const coachesRef = useRef<HTMLInputElement>(null);
-    const organizerRef = useRef<HTMLInputElement>(null);
-    const locationRef = useRef<HTMLInputElement>(null);
-    const locationUrlRef = useRef<HTMLInputElement>(null);
-    const startDateRef = useRef<HTMLInputElement>(null);
-    const endDateRef = useRef<HTMLInputElement>(null);
-    const thumbnailUrlRef = useRef<HTMLInputElement>(null);
-    const participationConditionRef = useRef<HTMLInputElement>(null);
-    const contactRef = useRef<HTMLInputElement>(null);
-    const toApproveRef = useRef<HTMLInputElement>(null);
+  const handleSave = useCallback(async () => {
+    const workshopData = {
+      workshop_topic: workshopTopicRef.current?.value.trim() || '',
+      workshop_url: workshopUrlRef.current?.value.trim() || '',
+      coaches: coachesRef.current?.value.trim() || '',
+      organizer: organizerRef.current?.value.trim() || '',
+      location: locationRef.current?.value.trim() || null,
+      location_url: locationUrlRef.current?.value.trim() || '',
+      start_date: startDateRef.current?.value.trim() || '',
+      end_date: endDateRef.current?.value.trim() || '',
+      thumbnail_url: thumbnailUrlRef.current?.value.trim() || null,
+      participation_condition: participationConditionRef.current?.value.trim() || null,
+      contact: contactRef.current?.value.trim() || null,
+    };
 
-    const handleSave = useCallback(async () => {
-        const workshop_topic = workshopTopicRef.current?.value.trim();
-        const workshop_url = workshopUrlRef.current?.value.trim();
-        const coaches = coachesRef.current?.value.trim();
-        const organizer = organizerRef.current?.value.trim();
-        const location = locationRef.current?.value.trim();
-        const location_url = locationUrlRef.current?.value.trim();
-        const start_date = startDateRef.current?.value.trim();
-        const end_date = endDateRef.current?.value.trim();
-        const thumbnail_url = thumbnailUrlRef.current?.value.trim() || null;
-        const participation_condition = participationConditionRef.current?.value.trim() || null;
-        const contact = contactRef.current?.value.trim() || null;
-        const to_approve = toApproveRef.current?.checked || false;
+    if (
+      !workshopData.workshop_topic ||
+      !workshopData.workshop_url ||
+      !workshopData.coaches ||
+      !workshopData.organizer ||
+      !workshopData.location_url ||
+      !workshopData.start_date ||
+      !workshopData.end_date
+    ) {
+      toast.error('Please fill out all required fields.');
+      return;
+    }
 
-        if (!workshop_topic || !workshop_url || !coaches || !organizer || !location || !location_url || !start_date || !end_date ) {
-            setError('Please fill out all required fields.');
-            return;
-          }
+    setIsLoading(true);
+    const errMessage = 'Saving workshop data failed';
 
-        const errMessage = 'Saving workshop data failed';
+    try {
+      let response;
+      const cleanedData = Object.fromEntries(
+        Object.entries(workshopData).filter(([_, value]) => value !== null),
+      );
 
-        console.log(participation_condition)
+      const requestParams = {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cleanedData),
+      };
 
-        try {
-            let response;
-            const requestParams = {
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    workshop_url, 
-                    workshop_topic, 
-                    coaches, organizer, 
-                    location_url, location, 
-                    start_date, 
-                    end_date, 
-                    ...(thumbnail_url && { thumbnail_url }),
-                    ...(participation_condition && { participation_condition }),
-                    ...(contact && { contact }) 
-                }),
-            }
+      if (openWithWorkshop?.workshop_id) {
+        response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop.workshop_id), {
+          ...requestParams,
+          method: 'PUT',
+        });
+      } else {
+        response = await fetch(ROUTES.API.WORKSHOPS, {
+          ...requestParams,
+          method: 'POST',
+        });
+      }
 
-            if (openWithWorkshop?.workshop_id) {
-                response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop?.workshop_id), {
-                    ...requestParams,
-                    method: 'PUT',
-                });
-            } else {
-                console.log(workshop_url)
-                response = await fetch(ROUTES.API.WORKSHOPS, {
-                    ...requestParams,
-                    method: 'POST',
-                })
-            }
+      if (isAproveWorkshopChecked && openWithWorkshop?.workshop_id) {
+        response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop?.workshop_id), {
+          ...requestParams,
+          method: 'PATCH',
+        });
+      }
 
-            if (response && !response.ok) {
-                throw new Error(errMessage);
-            }
+      if (response && !response.ok) {
+        throw new Error(errMessage);
+      }
 
-            refreshWorkshops();
-            onClose();
-        } catch (error) {
-            setError(error instanceof Error ? error.message : errMessage);
-        } 
-    }, [onClose, openWithWorkshop, refreshWorkshops]);
+      toast.success(
+        openWithWorkshop?.workshop_id
+          ? 'Workshop updated successfully'
+          : 'Workshop created successfully',
+      );
+      refreshWorkshops();
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : errMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onClose, openWithWorkshop, refreshWorkshops, isAproveWorkshopChecked]);
 
-    const handleContestDeletation = useCallback(async () => {
-        const errMessage = 'Failed to delete the workshop';
+  const handleWorkshopDeletation = useCallback(async () => {
+    setIsLoading(true);
+    const errMessage = 'Failed to delete the workshop';
 
-        try {
-            const response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop?.workshop_id as string), {
-                method: 'DELETE',
-              });
-        
-              if (!response.ok) {
-                throw new Error(errMessage);
-              }
-        
-              refreshWorkshops();
-        }   catch (error) {
-            setError(error instanceof Error ? error.message : errMessage);
-        } finally {
-            onClose();
-            setIsConfirmationOpen(false);
-        }
-    }, [onClose, openWithWorkshop?.workshop_id, refreshWorkshops]);
+    try {
+      const response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop?.workshop_id as string), {
+        method: 'DELETE',
+      });
 
-    return (
-        <>
-            <Modal
-              isOpen={isConfirmationOpen}
-              onClose={() => setIsConfirmationOpen(false)}
-              title="Confirm deletion"
-              buttons={[
-                {
-                  label: 'Cancel',
-                  onClick: () => setIsConfirmationOpen(false),
-                  variant: 'secondary',
-                },
-                {
-                  label: 'Yes, confirm',
-                  onClick: handleContestDeletation,
-                  variant: 'danger',
-                },
-              ]}
-            >
-              <h5>
-                Are you sure to remove
-                <Tooltip content={openWithWorkshop?.location_url}>
-                  <span className="font-bold text-rose-500 px-2">
-                    {openWithWorkshop?.workshop_topic}
-                  </span>
-                </Tooltip>
-                Workshop?
-              </h5>
-            </Modal>
+      if (!response.ok) {
+        throw new Error(errMessage);
+      }
 
-            <Modal
-                isOpen={!!openWithWorkshop}
-                onClose={onClose}
-                fullScreen={true}
-                title={openWithWorkshop?.workshop_id ? 'Update Content Data' : 'Add New Content'}
-                buttons={[
-                  {
-                    label: 'Delete',
-                    onClick: () => setIsConfirmationOpen(true),
-                    variant: 'danger',
-                    className: `${openWithWorkshop?.workshop_id ? '' : 'hidden'}`,
-                  },
-                  {
-                    label: 'Cancel',
-                    onClick: onClose,
-                    variant: 'secondary',
-                    className: 'justify-self-end',
-                  },
-                  {
-                    label: 'Save',
-                    onClick: handleSave,
-                    variant: 'primary',
-                  },
-                ]}
-            >
-                {isConfirmationOpen ? null : (
-                  <div className="space-y-4">
-                    {error && (
-                        <div className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-3 rounded-md mb-4">
-                          <p>{error}</p>
-                        </div>
-                    )}
-                    <Input 
-                        ref={workshopTopicRef} 
-                        required 
-                        label="Workshop Topic" 
-                        defaultValue={openWithWorkshop?.workshop_topic} 
-                    />
-        
-                    <Input
-                      ref={coachesRef}
-                      required
-                      label="Coaches"
-                      defaultValue={openWithWorkshop?.coaches}
-                    />
+      toast.success('Workshop deleted successfully');
+      refreshWorkshops();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : errMessage);
+    } finally {
+      onClose();
+      setIsConfirmationOpen(false);
+      setIsLoading(false);
+    }
+  }, [onClose, openWithWorkshop?.workshop_id, refreshWorkshops]);
 
-                    <Input
-                      ref={organizerRef}
-                      required
-                      label="Organizer"
-                      defaultValue={openWithWorkshop?.organizer}
-                    />
+  return (
+    <>
+      <Modal
+        isOpen={isConfirmationOpen}
+        onClose={() => setIsConfirmationOpen(false)}
+        title="Confirm deletion"
+        buttons={[
+          {
+            label: 'Cancel',
+            onClick: () => setIsConfirmationOpen(false),
+            variant: 'secondary',
+          },
+          {
+            label: 'Yes, confirm',
+            onClick: handleWorkshopDeletation,
+            variant: 'danger',
+            loading: isLoading,
+          },
+        ]}
+      >
+        <h5>
+          Are you sure to remove
+          <Tooltip content={openWithWorkshop?.workshop_url}>
+            <span className="font-bold text-rose-500 px-2">{openWithWorkshop?.workshop_topic}</span>
+          </Tooltip>
+          Workshop?
+        </h5>
+      </Modal>
 
-                    <InputUrl
-                      ref={workshopUrlRef}
-                      required
-                      placeholder="https://example.com"
-                      label="Workshop URL"
-                      defaultValue={openWithWorkshop?.workshop_url}
-                    />
+      <Modal
+        isOpen={!!openWithWorkshop}
+        onClose={onClose}
+        fullScreen={true}
+        title={openWithWorkshop?.workshop_id ? 'Update Content Data' : 'Add New Content'}
+        buttons={[
+          {
+            label: 'Delete',
+            onClick: () => setIsConfirmationOpen(true),
+            variant: 'danger',
+            className: `${openWithWorkshop?.workshop_id ? '' : 'hidden'}`,
+          },
+          {
+            label: 'Cancel',
+            onClick: onClose,
+            variant: 'secondary',
+            className: 'justify-self-end',
+          },
+          {
+            label: 'Save',
+            onClick: handleSave,
+            variant: 'primary',
+            loading: isLoading,
+          },
+        ]}
+      >
+        {isConfirmationOpen ? null : (
+          <div className="space-y-4">
+            <Input
+              ref={workshopTopicRef}
+              required
+              label="Workshop Topic"
+              defaultValue={openWithWorkshop?.workshop_topic}
+            />
 
-                    <Input
-                      ref={locationRef}
-                      required
-                      label="Location"
-                      defaultValue={openWithWorkshop?.location}
-                    />
+            <Input
+              ref={coachesRef}
+              required
+              label="Coaches"
+              defaultValue={openWithWorkshop?.coaches}
+            />
 
-                    <InputUrl
-                      ref={locationUrlRef}
-                      required
-                      placeholder="https://example.com"
-                      label="Location URL"
-                      defaultValue={openWithWorkshop?.location_url}
-                    />
+            <Input
+              ref={organizerRef}
+              required
+              label="Organizer"
+              defaultValue={openWithWorkshop?.organizer}
+            />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <DateInput
-                            ref={startDateRef}
-                            label="Start date"
-                            required
-                            defaultValue={openWithWorkshop?.start_date}
-                        />
-    
-                        <DateInput
-                            ref={endDateRef}
-                            label="End date"
-                            required
-                            defaultValue={openWithWorkshop?.end_date}
-                        />
-                    </div>
+            <UrlInput
+              label="Workshop URL"
+              required
+              ref={workshopUrlRef}
+              placeholder="Enter the workshop URL"
+              defaultValue={openWithWorkshop?.workshop_url}
+            />
 
-                    <Input
-                      ref={participationConditionRef}
-                      label="Participation Condition"
-                      defaultValue={openWithWorkshop?.participation_condition}
-                    />
+            <Input ref={locationRef} label="Location" defaultValue={openWithWorkshop?.location} />
 
-                    <Input
-                      ref={contactRef}
-                      label="Contact"
-                      defaultValue={openWithWorkshop?.contact}
-                    />
+            <UrlInput
+              label="Location URL"
+              required
+              ref={locationUrlRef}
+              placeholder="Enter the location URL"
+              defaultValue={openWithWorkshop?.location_url}
+            />
 
-                    <InputUrl
-                      ref={thumbnailUrlRef}
-                      placeholder="https://example.com"
-                      label="Thumbnail URL"
-                      defaultValue={openWithWorkshop?.thumbnail_url}
-                    />
-                  </div>
-                )}
-            </Modal>
-        </>
-    )
-}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <DateInput
+                ref={startDateRef}
+                label="Start date"
+                required
+                defaultValue={openWithWorkshop?.start_date}
+              />
+
+              <DateInput
+                ref={endDateRef}
+                label="End date"
+                required
+                defaultValue={openWithWorkshop?.end_date}
+              />
+            </div>
+
+            <Input
+              ref={participationConditionRef}
+              label="Participation Condition"
+              defaultValue={openWithWorkshop?.participation_condition}
+            />
+
+            <Input ref={contactRef} label="Contact" defaultValue={openWithWorkshop?.contact} />
+
+            <UrlInput
+              label="Thumbnail URL"
+              ref={thumbnailUrlRef}
+              placeholder="Enter the thumbnail URL"
+              defaultValue={openWithWorkshop?.thumbnail_url}
+            />
+
+            {openWithWorkshop?.workshop_id && (
+              <div className="flex pt-2">
+                <Switch
+                  onChange={() => setAproveWorkshopChecked((prev) => !prev)}
+                  checked={isAproveWorkshopChecked}
+                />
+                <div
+                  className={`pl-3 ${isAproveWorkshopChecked ? '' : 'text-zinc-400'} font-semibold`}
+                >
+                  {`I want to approve workshop`}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+    </>
+  );
+};

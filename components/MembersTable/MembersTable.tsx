@@ -17,7 +17,6 @@ export const MembersTable = () => {
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState<boolean>(true);
   const [modalOpenWithUser, setModalOpenWithUser] = useState<null | User>(null);
-  const [error, setError] = useState('');
 
   const { user } = useUser();
 
