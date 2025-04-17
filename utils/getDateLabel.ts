@@ -1,2 +1,7 @@
-export const getDateLabel = (start_date: string, end_date: string) =>
-  start_date === end_date ? 'date' : 'dates';
+export const getDateLabel = (startDate: string, endDate?: string | null): 'date' | 'dates' => {
+  if (!endDate || startDate === endDate) {
+    return 'date';
+  }
+
+  return 'dates';
+};

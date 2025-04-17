@@ -1,0 +1,6 @@
+export const TIMELINE_ITEM_STATUS = {
+  FOLLOWED: 'FOLLOWED',
+  UNFOLLOWED: 'UNFOLLOWED',
+} as const;
+
+export const DEFAULT_TIMELINE_PAGE_SIZE = 9;

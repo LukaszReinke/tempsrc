@@ -31,7 +31,7 @@ export const ROUTES = {
     CONTESTS_ALL: '/api/contests/all',
     WORKSHOPS_ALL: '/api/workshops/all',
 
-    CONTEST: (contest_id: string) => `/api/cotests/${contest_id}`,
+    CONTEST: (contest_id: string) => `/api/contests/${contest_id}`,
     WORKSHOP: (workshop_id: string) => `/api/workshops/${workshop_id}`,
 
     GET_USER: (user_id: string) => `/api/users/${user_id}`,

@@ -7,6 +7,7 @@ import { User } from '@hd/types';
 import { Input, Modal, Select, SelectOption, Tooltip } from '@hd/ui';
 import { getLabelByValue } from '@hd/utils';
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { toast } from 'react-toastify';
 
 type MemberModalFormProps = {
   openWithUser: null | User;
@@ -15,8 +16,6 @@ type MemberModalFormProps = {
 };
 
 export const FormMemberModal = ({ openWithUser, onClose, refreshUsers }: MemberModalFormProps) => {
-  // TODO: implement this with react toastify instead of state
-  const [error, setError] = useState<string | null>(null);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const { user } = useUser();
 
@@ -54,64 +53,75 @@ export const FormMemberModal = ({ openWithUser, onClose, refreshUsers }: MemberM
     const phone_number = phoneNumberRef.current?.value.trim();
 
     if (!first_name || !last_name || !email || !role) {
-      setError('Please fill out all required fields.');
+      toast.error('Please fill out all required fields.');
       return;
     }
 
     const errMessage = 'Saving user data failed';
 
-    try {
-      let response;
-      const requestParams = {
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, first_name, last_name, role, phone_number }),
-      };
+    await toast.promise(
+      (async () => {
+        let response;
+        const requestParams = {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, first_name, last_name, role, phone_number }),
+        };
 
-      if (openWithUser?.user_id) {
-        response = await fetch(ROUTES.API.GET_USER(openWithUser?.user_id as string), {
-          ...requestParams,
-          method: 'PUT',
-        });
-      } else {
-        response = await fetch(ROUTES.API.USERS, {
-          ...requestParams,
-          method: 'POST',
-        });
-      }
+        if (openWithUser?.user_id) {
+          response = await fetch(ROUTES.API.GET_USER(openWithUser?.user_id as string), {
+            ...requestParams,
+            method: 'PUT',
+          });
+        } else {
+          response = await fetch(ROUTES.API.USERS, {
+            ...requestParams,
+            method: 'POST',
+          });
+        }
 
-      if (response && !response.ok) {
-        throw new Error(errMessage);
-      }
+        if (!response.ok) {
+          throw new Error(errMessage);
+        }
 
-      // TODO: after implementing toast  enabled
-      refreshUsers();
-    } catch (error) {
-      setError(error instanceof Error ? error.message : errMessage);
-    } finally {
-      onClose();
-      setIsConfirmationOpen(false);
-    }
+        refreshUsers();
+      })(),
+      {
+        pending: openWithUser?.user_id ? 'Updating user...' : 'Creating user...',
+        success: openWithUser?.user_id
+          ? 'User updated successfully!'
+          : 'User created successfully!',
+        error: errMessage,
+      },
+    );
+
+    onClose();
+    setIsConfirmationOpen(false);
   }, [onClose, openWithUser, refreshUsers]);
 
   const handleUserDeletion = useCallback(async () => {
     const errMessage = 'Failed to delete the user';
 
-    try {
-      const response = await fetch(ROUTES.API.GET_USER(openWithUser?.user_id as string), {
-        method: 'DELETE',
-      });
+    await toast.promise(
+      (async () => {
+        const response = await fetch(ROUTES.API.GET_USER(openWithUser?.user_id as string), {
+          method: 'DELETE',
+        });
 
-      if (!response.ok) {
-        throw new Error(errMessage);
-      }
+        if (!response.ok) {
+          throw new Error(errMessage);
+        }
 
-      refreshUsers();
-    } catch (error) {
-      setError(error instanceof Error ? error.message : errMessage);
-    } finally {
-      onClose();
-      setIsConfirmationOpen(false);
-    }
+        refreshUsers();
+      })(),
+      {
+        pending: 'Deleting user...',
+        success: 'User deleted successfully!',
+        error: errMessage,
+      },
+    );
+
+    onClose();
+    setIsConfirmationOpen(false);
   }, [onClose, openWithUser?.user_id, refreshUsers]);
 
   return (

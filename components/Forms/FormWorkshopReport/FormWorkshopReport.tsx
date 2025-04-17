@@ -8,11 +8,13 @@ import { WorkshopPOST } from '@hd/types';
 import { API_GENERIC_ERROR } from './const';
 import { ROUTES } from '@hd/consts';
 import { toast } from 'react-toastify';
+import { useGoogleReCaptcha } from '@google-recaptcha/react';
 
 export const FormWorkshopReport = () => {
   const [error, setError] = useState<null | string>(null);
   const [isOrganizerChecked, setIsOrganizerChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { executeV3 } = useGoogleReCaptcha();
 
   const workshopUrlRef = useRef<HTMLInputElement>(null);
   const workshopTopicRef = useRef<HTMLInputElement>(null);
@@ -26,7 +28,6 @@ export const FormWorkshopReport = () => {
   const participationConditionRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = useCallback(async (event: React.FormEvent) => {
-    setIsLoading(true);
     event.preventDefault();
 
     const body = {
@@ -52,6 +53,33 @@ export const FormWorkshopReport = () => {
       setError(`All fields marked with '*' are required.`);
       return;
     }
+
+    if (!executeV3) {
+      toast.error('ReCaptcha is not ready yet. Please wait a moment and try again.');
+      return;
+    }
+
+    const gRecaptchaToken = await executeV3('contestReport');
+
+    const captcha_response = await fetch('/api/recaptchaSubmit', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json, text/plain, */*',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        gRecaptchaToken,
+      }),
+    });
+
+    const data = await captcha_response.json();
+
+    if (data?.success !== true) {
+      toast.error('Failed to verify recaptcha! You must be a robot!');
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       await toast.promise(

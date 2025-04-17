@@ -1,82 +1,106 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ListItem, Timeline, TimelineElement, ExternalDomainImage } from '@hd/components';
 import {
-  formatDateString,
-  getDateLabel,
-  getTimelineItemStatus,
-  toggleTimelineItemStatus,
-} from '@hd/utils';
+  ListItem,
+  Timeline,
+  TimelineElement,
+  ExternalDomainImage,
+  TimelineSkeleton,
+  TimelineBeginning,
+  TimelineEnding,
+} from '@hd/components';
+import { buildQueryString, formatDateString, getDateLabel } from '@hd/utils';
 import { Chip } from '@hd/ui';
-import { ROUTES } from '@hd/consts';
-import { Contest, TimelineItemStatus } from '@hd/types';
-import { CONTESTS } from './const';
+import { DEFAULT_TIMELINE_PAGE_SIZE, ROUTES } from '@hd/consts';
+import { Contest } from '@hd/types';
+import { useScrollTrigger, usePagination } from '@hd/hooks';
+import { useTimelineStatus } from '@hd/hooks';
 
 export const ContestTimeline = () => {
   const [contests, setContests] = useState<Contest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusState, setStatusState] = useState<{
-    [key: string]: TimelineItemStatus;
-  }>({});
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const { toggleStatus, getStatus } = useTimelineStatus('contest');
 
-  useEffect(() => {
-    // const fetchContests = async () => {
-    //   try {
-    //     const response = await fetch(ROUTES.API.contests);
-    //     const data = await response.json();
+  const { currentPage, totalPages, updatePagination } = usePagination({
+    initialItemsPerPage: DEFAULT_TIMELINE_PAGE_SIZE,
+  });
 
-    //     // FIXME: for now ignore data - await proper implementation
-    //     setContests(data);
-    //     setIsLoading(false);
-    //   } catch (error) {
-    //     console.error('Error fetching contests:', error);
-    //   }
-    // };
-    const fetchContests = async () => {
+  const fetchContests = useCallback(
+    async (page: number) => {
       try {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setContests(CONTESTS);
+        const query = buildQueryString({ page, per_page: DEFAULT_TIMELINE_PAGE_SIZE });
+        const response = await fetch(`${ROUTES.API.CONTESTS}?${query}`);
+        const data = await response.json();
+
+        setContests((prev) => {
+          const combined = [...prev, ...data.data.items];
+          const unique = Array.from(
+            new Map(combined.map((item) => [item.contest_id, item])).values(),
+          );
+          return unique;
+        });
+
+        updatePagination({
+          totalPages: data.meta.total_pages,
+          totalItems: data.meta.total_items,
+          currentPage: data.meta.page,
+          itemsPerPage: data.meta.items,
+        });
       } catch (error) {
         console.error('Error fetching contests:', error);
       } finally {
         setIsLoading(false);
+        setIsFetchingMore(false);
       }
-    };
+    },
+    [updatePagination],
+  );
 
-    fetchContests();
-  }, []);
+  useEffect(() => {
+    fetchContests(1);
+  }, [fetchContests]);
 
-  const handleIconClick = useCallback((itemId: string) => {
-    const newStatus = toggleTimelineItemStatus('contest', itemId);
-    setStatusState((prevState) => ({
-      ...prevState,
-      [itemId]: newStatus,
-    }));
-  }, []);
+  useScrollTrigger(() => {
+    if (!isFetchingMore && currentPage < (totalPages ?? 1)) {
+      setIsFetchingMore(true);
+      fetchContests(currentPage + 1);
+    }
+  });
+
+  const shouldShowSkeleton = isFetchingMore && currentPage < totalPages;
 
   return (
     <Timeline isLoading={isLoading}>
-      {contests.map((contest) => (
-        <TimelineElement
-          transparent
-          href={ROUTES.GET_WORKSHOP_PAGE(contest.contest_id)}
-          key={contest.contest_id}
-          timelineItemStatus={
-            statusState[contest.contest_id] || getTimelineItemStatus('contest', contest.contest_id)
-          }
-          handleIconClick={() => handleIconClick(contest.contest_id)}
-        >
-          {ContestTimelineItemContent(contest)}
-        </TimelineElement>
-      ))}
+      {contests.length === 0 && !isLoading && !isFetchingMore ? (
+        <div className="h-1 bg-white w-full mt-4" />
+      ) : (
+        <>
+          <TimelineBeginning />
+          {contests.map((contest, i) => (
+            <TimelineElement
+              transparent
+              href={ROUTES.GET_CONTEST_PAGE(contest.contest_id)}
+              key={contest.contest_id + i}
+              timelineItemStatus={getStatus(contest.contest_id)}
+              handleIconClick={() => toggleStatus(contest.contest_id)}
+            >
+              {ContestTimelineItemContent(contest)}
+            </TimelineElement>
+          ))}
+
+          {shouldShowSkeleton && <TimelineSkeleton />}
+          <TimelineEnding />
+        </>
+      )}
     </Timeline>
   );
 };
 
 const ContestTimelineItemContent = (contest: Contest) => {
   return (
-    <div className="flex flex-col justify-between md:flex-row md:max-h-[380px] lg:gap-2">
+    <div className="flex flex-col justify-between md:flex-row md:max-h-[360px] lg:gap-2">
       {contest.thumbnail_url && (
         <div className="w-full overflow-y-hidden">
           <ExternalDomainImage
@@ -89,10 +113,8 @@ const ContestTimelineItemContent = (contest: Contest) => {
       <div className="p-4 md:py-8 md:px-10 w-full bg-[#1e1e22] group-hover:bg-[#1e1e22]/[90]">
         <h5 className="text-xl font-bold md:text-justify">{contest.contest_name}</h5>
 
-        <ListItem label="Starting categories" content={contest.category} />
-
+        <ListItem label="Starting categories" content={contest.categories} />
         <ListItem label="Location" content={contest.location} />
-
         <ListItem
           label={`Event ${getDateLabel(contest.start_date, contest.end_date)}`}
           content={formatDateString(contest.start_date, contest.end_date)}

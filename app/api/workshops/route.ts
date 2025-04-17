@@ -1,10 +1,11 @@
-import { NextResponse, NextRequest } from 'next/server';
-import { apiClient, authRequired } from '../apiClient';
+import { NextRequest, NextResponse } from 'next/server';
+import { apiClient } from '../apiClient';
 import { Workshop } from '@hd/types';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const workshops: Workshop[] = await apiClient('workshops', { method: 'GET' });
+    const query = req.nextUrl.searchParams.toString();
+    const workshops: Workshop[] = await apiClient(`workshops/?${query}`, { method: 'GET' });
     return NextResponse.json(workshops);
   } catch (error) {
     console.error('Error fetching workshops:', error);
@@ -13,21 +14,15 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
-
   try {
-    await apiClient('workshops', {
+    const body = await req.json();
+    const newWorkshop = await apiClient('workshops', {
       method: 'POST',
       body: JSON.stringify(body),
     });
-
-    const response = NextResponse.json({
-      message: 'Workshop successfully reported',
-    });
-
-    return response;
+    return NextResponse.json(newWorkshop, { status: 201 });
   } catch (error) {
     console.error('Error on workshop POST:', error);
-    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create workshop' }, { status: 500 });
   }
 }

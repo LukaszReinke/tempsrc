@@ -1,0 +1,1 @@
+export const GRID_CLASSES = 'grid grid-cols-1 md:grid-cols-2 gap-4'; 

@@ -12,7 +12,7 @@ export const EventStatus = ({
   isApproved,
   pendingText = 'Pending',
   approvedText = 'Approved',
-  useClockIcon = false
+  useClockIcon = false,
 }: EventStatusProps) => {
   return isApproved ? (
     <div className="flex items-center text-green-600">

@@ -1,11 +1,12 @@
 'use client';
 
 import { DateInput, LocationInput, UrlInput } from '@hd/components';
-import { ROUTES } from '@hd/consts';
+import { ROUTES, SYSTEM_ROLES, GRID_CLASSES } from '@hd/consts';
 import { WorkshopsGET } from '@hd/types';
 import { Input, Modal, Tooltip, Switch } from '@hd/ui';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useMemo } from 'react';
 import { toast } from 'react-toastify';
+import { useUser } from '@hd/context';
 
 type WorkshopModalFormProps = {
   openWithWorkshop: null | WorkshopsGET;
@@ -21,6 +22,15 @@ export const FormWorkshopModal = ({
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [isAproveWorkshopChecked, setAproveWorkshopChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useUser();
+
+  const hasPermissions = useMemo(() => {
+    return (
+      user?.role === SYSTEM_ROLES.EVENT_MOD ||
+      user?.role === SYSTEM_ROLES.ADMIN ||
+      user?.role === SYSTEM_ROLES.SUPER_ADMIN
+    );
+  }, [user?.role]);
 
   const workshopTopicRef = useRef<HTMLInputElement>(null);
   const workshopUrlRef = useRef<HTMLInputElement>(null);
@@ -35,6 +45,11 @@ export const FormWorkshopModal = ({
   const contactRef = useRef<HTMLInputElement>(null);
 
   const handleSave = useCallback(async () => {
+    if (!hasPermissions) {
+      toast.error('You do not have permission to perform this action');
+      return;
+    }
+
     const workshopData = {
       workshop_topic: workshopTopicRef.current?.value.trim() || '',
       workshop_url: workshopUrlRef.current?.value.trim() || '',
@@ -66,76 +81,124 @@ export const FormWorkshopModal = ({
     const errMessage = 'Saving workshop data failed';
 
     try {
-      let response;
-      const cleanedData = Object.fromEntries(
-        Object.entries(workshopData).filter(([_, value]) => value !== null),
+      await toast.promise(
+        (async () => {
+          let response;
+          const cleanedData = Object.fromEntries(
+            Object.entries(workshopData).filter(([_, value]) => value !== null),
+          );
+
+          const requestParams = {
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cleanedData),
+          };
+
+          if (openWithWorkshop?.workshop_id) {
+            response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop.workshop_id), {
+              ...requestParams,
+              method: 'PUT',
+            });
+
+            if (isAproveWorkshopChecked) {
+              response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop.workshop_id), {
+                ...requestParams,
+                method: 'PATCH',
+              });
+            }
+          } else {
+            response = await fetch(ROUTES.API.WORKSHOPS, {
+              ...requestParams,
+              method: 'POST',
+            });
+
+            const createData = await response.json();
+            if (!response.ok) throw new Error(createData.error || errMessage);
+
+            if (isAproveWorkshopChecked) {
+              response = await fetch(ROUTES.API.WORKSHOP(createData.workshop_id), {
+                headers: { 'Content-Type': 'application/json' },
+                method: 'PATCH',
+              });
+            } else {
+              return createData;
+            }
+          }
+
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || errMessage);
+
+          return data;
+        })(),
+        {
+          pending: openWithWorkshop?.workshop_id
+            ? 'Updating workshop...'
+            : 'Creating new workshop...',
+          success: openWithWorkshop?.workshop_id
+            ? 'Workshop updated successfully!'
+            : 'Workshop created successfully!',
+          error: {
+            render: ({ data }: { data: Error }) => {
+              return data?.message || errMessage;
+            },
+          },
+        },
       );
 
-      const requestParams = {
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanedData),
-      };
-
-      if (openWithWorkshop?.workshop_id) {
-        response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop.workshop_id), {
-          ...requestParams,
-          method: 'PUT',
-        });
-      } else {
-        response = await fetch(ROUTES.API.WORKSHOPS, {
-          ...requestParams,
-          method: 'POST',
-        });
-      }
-
-      if (isAproveWorkshopChecked && openWithWorkshop?.workshop_id) {
-        response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop?.workshop_id), {
-          ...requestParams,
-          method: 'PATCH',
-        });
-      }
-
-      if (response && !response.ok) {
-        throw new Error(errMessage);
-      }
-
-      toast.success(
-        openWithWorkshop?.workshop_id
-          ? 'Workshop updated successfully'
-          : 'Workshop created successfully',
-      );
       refreshWorkshops();
       onClose();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : errMessage);
+      console.error('Error saving workshop:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [onClose, openWithWorkshop, refreshWorkshops, isAproveWorkshopChecked]);
+  }, [onClose, openWithWorkshop, refreshWorkshops, isAproveWorkshopChecked, hasPermissions]);
 
   const handleWorkshopDeletation = useCallback(async () => {
+    if (!hasPermissions) {
+      toast.error('You do not have permission to perform this action');
+      return;
+    }
+
     setIsLoading(true);
     const errMessage = 'Failed to delete the workshop';
 
     try {
-      const response = await fetch(ROUTES.API.WORKSHOP(openWithWorkshop?.workshop_id as string), {
-        method: 'DELETE',
-      });
+      await toast.promise(
+        (async () => {
+          const response = await fetch(
+            ROUTES.API.WORKSHOP(openWithWorkshop?.workshop_id as string),
+            {
+              method: 'DELETE',
+            },
+          );
 
-      if (!response.ok) {
-        throw new Error(errMessage);
-      }
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || errMessage);
 
-      toast.success('Workshop deleted successfully');
+          return data;
+        })(),
+        {
+          pending: 'Deleting workshop...',
+          success: 'Workshop deleted successfully!',
+          error: {
+            render: ({ data }: { data: Error }) => {
+              return data?.message || errMessage;
+            },
+          },
+        },
+      );
+
       refreshWorkshops();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : errMessage);
+      console.error('Error deleting workshop:', error);
     } finally {
       onClose();
       setIsConfirmationOpen(false);
       setIsLoading(false);
     }
-  }, [onClose, openWithWorkshop?.workshop_id, refreshWorkshops]);
+  }, [onClose, openWithWorkshop?.workshop_id, refreshWorkshops, hasPermissions]);
+
+  const isFormDisabled = !hasPermissions;
 
   return (
     <>
@@ -154,6 +217,7 @@ export const FormWorkshopModal = ({
             onClick: handleWorkshopDeletation,
             variant: 'danger',
             loading: isLoading,
+            disabled: isFormDisabled,
           },
         ]}
       >
@@ -170,13 +234,22 @@ export const FormWorkshopModal = ({
         isOpen={!!openWithWorkshop}
         onClose={onClose}
         fullScreen={true}
-        title={openWithWorkshop?.workshop_id ? 'Update Content Data' : 'Add New Content'}
+        minSize={false}
+        title={
+          openWithWorkshop?.workshop_id
+            ? hasPermissions
+              ? 'Update Workshop Data'
+              : 'View Workshop Data'
+            : hasPermissions
+              ? 'Add New Workshop'
+              : 'View Workshop'
+        }
         buttons={[
           {
             label: 'Delete',
             onClick: () => setIsConfirmationOpen(true),
             variant: 'danger',
-            className: `${openWithWorkshop?.workshop_id ? '' : 'hidden'}`,
+            className: `${openWithWorkshop?.workshop_id && hasPermissions ? '' : 'hidden'}`,
           },
           {
             label: 'Cancel',
@@ -189,41 +262,20 @@ export const FormWorkshopModal = ({
             onClick: handleSave,
             variant: 'primary',
             loading: isLoading,
+            className: `${hasPermissions ? '' : 'hidden'}`,
           },
         ]}
       >
         {isConfirmationOpen ? null : (
-          <div className="space-y-4">
-            <Input
-              ref={workshopTopicRef}
-              required
-              label="Workshop Topic"
-              defaultValue={openWithWorkshop?.workshop_topic}
-            />
-
-            <Input
-              ref={coachesRef}
-              required
-              label="Coaches"
-              defaultValue={openWithWorkshop?.coaches}
-            />
-
-            <Input
-              ref={organizerRef}
-              required
-              label="Organizer"
-              defaultValue={openWithWorkshop?.organizer}
-            />
-
+          <div className="space-y-4 flex flex-col h-full">
             <UrlInput
               label="Workshop URL"
               required
               ref={workshopUrlRef}
               placeholder="Enter the workshop URL"
               defaultValue={openWithWorkshop?.workshop_url}
+              disabled={isFormDisabled}
             />
-
-            <Input ref={locationRef} label="Location" defaultValue={openWithWorkshop?.location} />
 
             <UrlInput
               label="Location URL"
@@ -231,14 +283,40 @@ export const FormWorkshopModal = ({
               ref={locationUrlRef}
               placeholder="Enter the location URL"
               defaultValue={openWithWorkshop?.location_url}
+              disabled={isFormDisabled}
+            />
+            
+            <Input
+              ref={workshopTopicRef}
+              required
+              label="Workshop Topic"
+              defaultValue={openWithWorkshop?.workshop_topic}
+              disabled={isFormDisabled}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              ref={coachesRef}
+              required
+              label="Coaches"
+              defaultValue={openWithWorkshop?.coaches}
+              disabled={isFormDisabled}
+            />
+
+            <Input
+              ref={organizerRef}
+              required
+              label="Organizer"
+              defaultValue={openWithWorkshop?.organizer}
+              disabled={isFormDisabled}
+            />
+
+            <div className={GRID_CLASSES}>
               <DateInput
                 ref={startDateRef}
                 label="Start date"
                 required
                 defaultValue={openWithWorkshop?.start_date}
+                disabled={isFormDisabled}
               />
 
               <DateInput
@@ -246,37 +324,46 @@ export const FormWorkshopModal = ({
                 label="End date"
                 required
                 defaultValue={openWithWorkshop?.end_date}
+                disabled={isFormDisabled}
               />
             </div>
 
-            <Input
-              ref={participationConditionRef}
-              label="Participation Condition"
-              defaultValue={openWithWorkshop?.participation_condition}
-            />
+            <div className={GRID_CLASSES}>
+              <Input
+                ref={participationConditionRef}
+                label="Participation Condition"
+                defaultValue={openWithWorkshop?.participation_condition}
+                disabled={isFormDisabled}
+              />
 
-            <Input ref={contactRef} label="Contact" defaultValue={openWithWorkshop?.contact} />
-
+              <Input
+                ref={contactRef}
+                label="Contact"
+                defaultValue={openWithWorkshop?.contact}
+                disabled={isFormDisabled}
+              />
+            </div>
+            
             <UrlInput
               label="Thumbnail URL"
               ref={thumbnailUrlRef}
               placeholder="Enter the thumbnail URL"
               defaultValue={openWithWorkshop?.thumbnail_url}
+              disabled={isFormDisabled}
             />
 
-            {openWithWorkshop?.workshop_id && (
-              <div className="flex pt-2">
-                <Switch
-                  onChange={() => setAproveWorkshopChecked((prev) => !prev)}
-                  checked={isAproveWorkshopChecked}
-                />
-                <div
-                  className={`pl-3 ${isAproveWorkshopChecked ? '' : 'text-zinc-400'} font-semibold`}
-                >
-                  {`I want to approve workshop`}
-                </div>
+            <div className="flex pt-2">
+              <Switch
+                onChange={() => setAproveWorkshopChecked((prev) => !prev)}
+                checked={isAproveWorkshopChecked}
+                disabled={isFormDisabled}
+              />
+              <div
+                className={`pl-3 ${isAproveWorkshopChecked ? '' : 'text-zinc-400'} font-semibold`}
+              >
+                {`I want to approve workshop`}
               </div>
-            )}
+            </div>
           </div>
         )}
       </Modal>

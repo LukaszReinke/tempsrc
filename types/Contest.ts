@@ -4,16 +4,10 @@ export type Contest = {
   location: string;
   start_date: string;
   end_date?: string;
-  category: string;
+  categories: string;
 
   thumbnail_url?: string;
   federation?: string;
-};
-
-// TODO: fix type on deploy
-export type DetailedContest = Contest & {
-  // FIXME: extend type correctly
-  contest_url: string;
 };
 
 export type ContestsPOST = {

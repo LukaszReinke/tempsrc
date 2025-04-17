@@ -81,7 +81,7 @@ const NAVIGATION_LINKS = [
     href: ROUTES.CREW_CONTEST_MANAGEMENT,
     children: (
       <>
-        <TrophyIcon  className={LINK_ICON_STYLES} />
+        <TrophyIcon className={LINK_ICON_STYLES} />
         <span className={LINK_LABEL_STYLES}>Contests</span>
       </>
     ),

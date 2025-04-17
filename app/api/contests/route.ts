@@ -1,10 +1,11 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { apiClient, authRequired } from '../apiClient';
+import { apiClient } from '../apiClient';
 import { Contest } from '@hd/types';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const contests: Contest[] = await apiClient('contests', { method: 'GET' });
+    const query = req.nextUrl.searchParams.toString();
+    const contests: Contest[] = await apiClient(`contests/?${query}`, { method: 'GET' });
     return NextResponse.json(contests);
   } catch (error) {
     console.error('Error fetching contests:', error);
@@ -18,9 +19,8 @@ export async function POST(req: NextRequest) {
     const newContest = await apiClient('contests', {
       method: 'POST',
       body: JSON.stringify(body),
-      authRequired,
     });
-    return NextResponse.json(newContest, { status: 201 })
+    return NextResponse.json(newContest, { status: 201 });
   } catch (error) {
     console.error('Error creating contest:', error);
     return NextResponse.json({ error: 'Failed to create contest' }, { status: 500 });

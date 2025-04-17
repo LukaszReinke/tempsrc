@@ -3,12 +3,11 @@
 import { ROUTES } from '@hd/consts';
 import { User } from '@hd/types';
 import { Input, Button, ContentLoader, Modal } from '@hd/ui';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'react-toastify';
 
 export const FormEditPersonalData = () => {
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-  const [error, setError] = useState('');
-
   const nameRef = useRef<HTMLInputElement>(null);
   const surnameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -30,12 +29,19 @@ export const FormEditPersonalData = () => {
         setUserData(data);
       } catch (error) {
         console.error('Error fetching user data:', error);
+        toast.error('Error loading your profile. Please refresh the page.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
+  }, []);
+
+  const resetForm = useCallback(() => {
+    if (newPasswordRef.current) newPasswordRef.current.value = '';
+    if (newPasswordConfirmationRef.current) newPasswordConfirmationRef.current.value = '';
+    if (currentPasswordRef.current) currentPasswordRef.current.value = '';
   }, []);
 
   const handlePersonalDataUpdate = async () => {
@@ -48,12 +54,15 @@ export const FormEditPersonalData = () => {
     const new_password_confirmation = newPasswordConfirmationRef.current?.value;
 
     if (!first_name || !last_name || !email || !current_password) {
-      setError('Please fill out all required fields.');
+      toast.error('Please fill out all required fields.');
       return;
     }
 
     if (new_password && new_password !== new_password_confirmation) {
-      setError(`New password and it's confirmation do not match.`);
+      toast.error(`Passwords do not match.`);
+      setIsConfirmationOpen(false);
+      if (newPasswordRef.current) newPasswordRef.current.value = '';
+      if (newPasswordConfirmationRef.current) newPasswordConfirmationRef.current.value = '';
       return;
     }
 
@@ -67,24 +76,33 @@ export const FormEditPersonalData = () => {
     };
 
     try {
-      const response = await fetch(ROUTES.API.PROFILE, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
+      await toast.promise(
+        (async () => {
+          const response = await fetch(ROUTES.API.PROFILE, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update profile.');
+          }
+
+          const updatedUserData = await response.json();
+          setUserData(updatedUserData);
+        })(),
+        {
+          pending: 'Updating profile...',
+          success: 'Your profile has been updated!',
+          error: 'Failed to update profile.',
         },
-        body: JSON.stringify(payload),
-      });
+      );
 
-      if (!response.ok) {
-        throw new Error('Failed to update profile.');
-      }
-
-      const updatedUserData = await response.json();
-      setUserData(updatedUserData);
-      setIsConfirmationOpen(false);
+      resetForm();
     } catch (error) {
       console.error('Error updating personal data:', error);
-      setError(error instanceof Error ? error.message : 'Error updating personal data');
     } finally {
       setIsConfirmationOpen(false);
     }
@@ -111,11 +129,21 @@ export const FormEditPersonalData = () => {
         </div>
       </Modal>
 
-      <form className="w-[500px]">
+      <form className="w-[500px]" autoComplete="off">
         <div className="space-y-4 max-w-[500px]">
           <h5 className="text-2xl pb-2 md:pb-4">Set up new password:</h5>
-          <Input ref={newPasswordRef} label="New password" />
-          <Input ref={newPasswordConfirmationRef} label="Confirm new password" />
+          <Input
+            ref={newPasswordRef}
+            type="password"
+            label="New password"
+            autoComplete="new-password"
+          />
+          <Input
+            ref={newPasswordConfirmationRef}
+            type="password"
+            label="Confirm new password"
+            autoComplete="new-password"
+          />
 
           <h5 className="text-2xl pb-2 md:pb-4 pt-6 md:pt-8">Edit personal data:</h5>
           <Input required ref={nameRef} label="Name" defaultValue={userData?.first_name} />

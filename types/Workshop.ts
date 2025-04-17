@@ -37,7 +37,6 @@ export type WorkshopsGET = {
   end_date: string;
   created_at: string;
   is_approved: boolean;
-  
 
   thumbnail_url?: string;
   participation_condition?: string;

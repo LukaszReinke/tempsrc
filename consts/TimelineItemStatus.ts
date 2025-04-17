@@ -1,4 +1,0 @@
-export const TIMELINE_ITEM_STATUS = {
-  FOLLOWED: 'FOLLOWED',
-  UNFOLLOWED: 'UNFOLLOWED',
-} as const;

@@ -1,12 +1,14 @@
 'use client';
 
-import { Navbar, Footer, LoaderWrapper } from '@hd/components';
 import './globals.css';
+
+import { Navbar, Footer, LoaderWrapper } from '@hd/components';
 import { FOOTER_HEIGHT, NAV_HEIGHT } from '@hd/consts/Heights';
-import { ToastProvider, UserProvider } from '@hd/context';
+import { UserProvider } from '@hd/context';
 import { TransitionProvider } from '@hd/context';
 import { PROTECTED_ROUTE } from '@hd/consts';
 import { usePathname } from 'next/navigation';
+import { ToastProvider } from '@hd/Providers';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

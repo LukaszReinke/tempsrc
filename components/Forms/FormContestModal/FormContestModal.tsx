@@ -1,13 +1,12 @@
 'use client';
 
 import { DateInput, LocationInput, UrlInput } from '@hd/components';
-import { ROUTES } from '@hd/consts';
+import { ROUTES, SYSTEM_ROLES, GRID_CLASSES } from '@hd/consts';
 import { ContestsGET } from '@hd/types';
 import { Input, Modal, Tooltip, Switch } from '@hd/ui';
 import { useCallback, useRef, useState, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { useUser } from '@hd/context';
-import { SYSTEM_ROLES, SYSTEM_ROLES_SELECT_OPTIONS } from '@hd/consts';
 
 type ContestModalFormProps = {
   openWithContest: null | ContestsGET;
@@ -25,6 +24,14 @@ export const FormContestModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useUser();
 
+  const hasPermissions = useMemo(() => {
+    return (
+      user?.role === SYSTEM_ROLES.EVENT_MOD ||
+      user?.role === SYSTEM_ROLES.ADMIN ||
+      user?.role === SYSTEM_ROLES.SUPER_ADMIN
+    );
+  }, [user?.role]);
+
   const contestNameRef = useRef<HTMLInputElement>(null);
   const contestUrlRef = useRef<HTMLInputElement>(null);
   const locationUrlRef = useRef<HTMLInputElement>(null);
@@ -37,6 +44,11 @@ export const FormContestModal = ({
   const thumbnailUrlRef = useRef<HTMLInputElement>(null);
 
   const handleSave = useCallback(async () => {
+    if (!hasPermissions) {
+      toast.error('You do not have permission to perform this action');
+      return;
+    }
+
     const contestData = {
       contest_name: contestNameRef.current?.value.trim() || '',
       contest_url: contestUrlRef.current?.value.trim() || '',
@@ -65,76 +77,115 @@ export const FormContestModal = ({
     const errMessage = 'Saving contest data failed';
 
     try {
-      let response;
-      const cleanedData = Object.fromEntries(
-        Object.entries(contestData).filter(([_, value]) => value !== null),
+      await toast.promise(
+        (async () => {
+          let response;
+          const cleanedData = Object.fromEntries(
+            Object.entries(contestData).filter(([_, value]) => value !== null),
+          );
+
+          const requestParams = {
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cleanedData),
+          };
+
+          if (openWithContest?.contest_id) {
+            response = await fetch(ROUTES.API.CONTEST(openWithContest.contest_id), {
+              ...requestParams,
+              method: 'PUT',
+            });
+
+            if (isAproveContestChecked) {
+              response = await fetch(ROUTES.API.CONTEST(openWithContest.contest_id), {
+                ...requestParams,
+                method: 'PATCH',
+              });
+            }
+          } else {
+            response = await fetch(ROUTES.API.CONTESTS, {
+              ...requestParams,
+              method: 'POST',
+            });
+
+            if (isAproveContestChecked && response.ok) {
+              const newContest = await response.json();
+              response = await fetch(ROUTES.API.CONTEST(newContest.contest_id), {
+                headers: { 'Content-Type': 'application/json' },
+                method: 'PATCH',
+              });
+            }
+          }
+
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || errMessage);
+
+          return data;
+        })(),
+        {
+          pending: openWithContest?.contest_id ? 'Updating contest...' : 'Creating new contest...',
+          success: openWithContest?.contest_id
+            ? 'Contest updated successfully!'
+            : 'Contest created successfully!',
+          error: {
+            render: ({ data }: { data: Error }) => {
+              return data?.message || errMessage;
+            },
+          },
+        },
       );
 
-      const requestParams = {
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanedData),
-      };
-
-      if (openWithContest?.contest_id) {
-        response = await fetch(ROUTES.API.CONTEST(openWithContest.contest_id), {
-          ...requestParams,
-          method: 'PUT',
-        });
-      } else {
-        response = await fetch(ROUTES.API.CONTESTS, {
-          ...requestParams,
-          method: 'POST',
-        });
-      }
-
-      if (isAproveContestChecked && openWithContest?.contest_id) {
-        response = await fetch(ROUTES.API.CONTEST(openWithContest.contest_id), {
-          ...requestParams,
-          method: 'PATCH',
-        });
-      }
-
-      if (response && !response.ok) {
-        throw new Error(errMessage);
-      }
-
-      toast.success(
-        openWithContest?.contest_id
-          ? 'Contest updated successfully'
-          : 'Contest created successfully',
-      );
       refreshContests();
       onClose();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : errMessage);
+      console.error('Error saving contest:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [onClose, openWithContest, refreshContests, isAproveContestChecked]);
+  }, [onClose, openWithContest, refreshContests, isAproveContestChecked, hasPermissions]);
 
   const handleContestDeletation = useCallback(async () => {
+    if (!hasPermissions) {
+      toast.error('You do not have permission to perform this action');
+      return;
+    }
+
     setIsLoading(true);
     const errMessage = 'Failed to delete the contest';
 
     try {
-      const response = await fetch(ROUTES.API.CONTEST(openWithContest?.contest_id as string), {
-        method: 'DELETE',
-      });
+      await toast.promise(
+        (async () => {
+          const response = await fetch(ROUTES.API.CONTEST(openWithContest?.contest_id as string), {
+            method: 'DELETE',
+          });
 
-      if (!response.ok) {
-        throw new Error(errMessage);
-      }
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || errMessage);
 
-      toast.success('Contest deleted successfully');
+          return data;
+        })(),
+        {
+          pending: 'Deleting contest...',
+          success: 'Contest deleted successfully!',
+          error: {
+            render: ({ data }: { data: Error }) => {
+              return data?.message || errMessage;
+            },
+          },
+        },
+      );
+
       refreshContests();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : errMessage);
+      console.error('Error deleting contest:', error);
     } finally {
       setIsLoading(false);
       onClose();
       setIsConfirmationOpen(false);
     }
-  }, [onClose, openWithContest?.contest_id, refreshContests]);
+  }, [onClose, openWithContest?.contest_id, refreshContests, hasPermissions]);
+
+  const isFormDisabled = !hasPermissions;
 
   return (
     <>
@@ -153,6 +204,7 @@ export const FormContestModal = ({
             onClick: handleContestDeletation,
             variant: 'danger',
             loading: isLoading,
+            disabled: isFormDisabled,
           },
         ]}
       >
@@ -169,14 +221,22 @@ export const FormContestModal = ({
         isOpen={!!openWithContest}
         onClose={onClose}
         fullScreen={true}
-        title={openWithContest?.contest_id ? 'Update Content Data' : 'Add New Content'}
+        minSize={false}
+        title={
+          openWithContest?.contest_id
+            ? hasPermissions
+              ? 'Update Contest Data'
+              : 'View Contest Data'
+            : hasPermissions
+              ? 'Add New Contest'
+              : 'View Contest'
+        }
         buttons={[
           {
             label: 'Delete',
             onClick: () => setIsConfirmationOpen(true),
             variant: 'danger',
-
-            className: `${openWithContest?.contest_id ? '' : 'hidden'}`,
+            className: `${openWithContest?.contest_id && hasPermissions ? '' : 'hidden'}`,
           },
           {
             label: 'Cancel',
@@ -189,27 +249,20 @@ export const FormContestModal = ({
             onClick: handleSave,
             variant: 'primary',
             loading: isLoading,
+            className: `${hasPermissions ? '' : 'hidden'}`,
           },
         ]}
       >
         {isConfirmationOpen ? null : (
-          <div className="space-y-4">
-            <Input
-              ref={contestNameRef}
-              required
-              label="Name"
-              defaultValue={openWithContest?.contest_name}
-            />
-
+          <div className="space-y-4 flex flex-col h-full">
             <UrlInput
               label="Contest URL"
               required
               ref={contestUrlRef}
               placeholder="Enter the contest URL"
               defaultValue={openWithContest?.contest_url}
+              disabled={isFormDisabled}
             />
-
-            <Input ref={locationRef} label="Location" defaultValue={openWithContest?.location} />
 
             <UrlInput
               label="Location URL"
@@ -217,20 +270,31 @@ export const FormContestModal = ({
               ref={locationUrlRef}
               placeholder="Enter the location URL"
               defaultValue={openWithContest?.location_url}
+              disabled={isFormDisabled}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              ref={contestNameRef}
+              required
+              label="Name"
+              defaultValue={openWithContest?.contest_name}
+              disabled={isFormDisabled}
+            />
+            
+            <div className={GRID_CLASSES}>
               <DateInput
                 ref={startDateRef}
                 label="Start date"
                 required
                 defaultValue={openWithContest?.start_date}
+                disabled={isFormDisabled}
               />
 
               <DateInput
                 ref={endDateRef}
                 label="End date"
                 defaultValue={openWithContest?.end_date}
+                disabled={isFormDisabled}
               />
             </div>
 
@@ -239,36 +303,45 @@ export const FormContestModal = ({
               required
               label="Categories"
               defaultValue={openWithContest?.categories}
+              disabled={isFormDisabled}
             />
 
-            <Input
-              ref={federationRef}
-              label="Federation"
-              defaultValue={openWithContest?.federation}
-            />
+            <div className={GRID_CLASSES}>
+              <Input
+                ref={federationRef}
+                label="Federation"
+                defaultValue={openWithContest?.federation}
+                disabled={isFormDisabled}
+              />
 
-            <Input ref={contactRef} label="Contact" defaultValue={openWithContest?.contact} />
+              <Input
+                ref={contactRef}
+                label="Contact"
+                defaultValue={openWithContest?.contact}
+                disabled={isFormDisabled}
+              />
+            </div>
 
             <UrlInput
               label="Thumbnail URL"
               ref={thumbnailUrlRef}
               placeholder="Enter the thumbnail URL"
               defaultValue={openWithContest?.thumbnail_url}
+              disabled={isFormDisabled}
             />
 
-            {openWithContest?.contest_id && (
-              <div className="flex pt-2">
-                <Switch
-                  onChange={() => setAproveContestChecked((prev) => !prev)}
-                  checked={isAproveContestChecked}
-                />
-                <div
-                  className={`pl-3 ${isAproveContestChecked ? '' : 'text-zinc-400'} font-semibold`}
-                >
-                  {`I want to approve contest`}
-                </div>
+            <div className="flex pt-2">
+              <Switch
+                onChange={() => setAproveContestChecked((prev) => !prev)}
+                checked={isAproveContestChecked}
+                disabled={isFormDisabled}
+              />
+              <div
+                className={`pl-3 ${isAproveContestChecked ? '' : 'text-zinc-400'} font-semibold`}
+              >
+                {`I want to approve contest`}
               </div>
-            )}
+            </div>
           </div>
         )}
       </Modal>

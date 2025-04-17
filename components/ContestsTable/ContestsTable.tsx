@@ -2,18 +2,24 @@
 
 import { useEffect, useState, Fragment, useCallback } from 'react';
 import { Transition } from '@headlessui/react';
-import { ContestsGET, ContestsGetApiResponse } from '@hd/types';
+import { ContestsGET, ContestsGetApiResponse, FilterQuery, PaginatedResponse } from '@hd/types';
 import { ContentLoader, IconButton, Tooltip } from '@hd/ui';
-import { Table, FormContestModal, EventStatus } from '@hd/components';
-import { PlusIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
-import { ROUTES, SYSTEM_ROLES } from '@hd/consts';
+import { Table, FormContestModal, EventStatus, Pagination, TableFilter, ApprovalFilter } from '@hd/components';
+import { PlusIcon } from '@heroicons/react/24/outline';
+import { ROUTES, SYSTEM_ROLES, CONTEST_FILTER_FIELDS } from '@hd/consts';
+import { INITIAL_FILTER_STATE, type FilterFieldType, type FilterValueType, type ApprovalFilterType } from '@hd/consts/filters';
 import { useUser } from '@hd/context';
 import { formatDateString } from '@hd/utils';
+import { usePagination } from '@hd/hooks';
 
 export const ContestsTable = () => {
   const [contests, setContests] = useState<ContestsGET[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [modalOpenWithContest, setModalOpenWithContest] = useState<null | ContestsGET>(null);
+  const { currentPage, totalPages, itemsPerPage, handlePageChange, updatePagination } = usePagination();
+  const [filterField, setFilterField] = useState<FilterFieldType>(INITIAL_FILTER_STATE.fieldName);
+  const [filterValue, setFilterValue] = useState<FilterValueType>(INITIAL_FILTER_STATE.fieldValue);
+  const [approvalFilter, setApprovalFilter] = useState<ApprovalFilterType>(INITIAL_FILTER_STATE.approval);
 
   const { user } = useUser();
 
@@ -25,22 +31,51 @@ export const ContestsTable = () => {
   const fetchContests = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(ROUTES.API.CONTESTS_ALL);
+      const queryParams = new URLSearchParams({
+        page: currentPage.toString(),
+        per_page: itemsPerPage.toString(),
+      });
+
+      if (filterField && filterValue) {
+        queryParams.append('field_name', filterField);
+        queryParams.append('field_value', filterValue);
+      }
+
+      if (approvalFilter !== null) {
+        queryParams.append('is_approved', approvalFilter);
+      }
+
+      const response = await fetch(`${ROUTES.API.CONTESTS_ALL}?${queryParams.toString()}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch users');
+        throw new Error('Failed to fetch contests');
       }
       const data: ContestsGetApiResponse = await response.json();
       setContests(data.data.items);
+      updatePagination({
+        totalPages: data.meta.total_pages,
+        totalItems: data.meta.total_items
+      });
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching contests:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, itemsPerPage, updatePagination, filterField, filterValue, approvalFilter]);
 
   useEffect(() => {
     fetchContests();
   }, [fetchContests]);
+
+  const handleFilterChange = useCallback((query: FilterQuery) => {
+    setFilterField(query.field_name as FilterFieldType || INITIAL_FILTER_STATE.fieldName);
+    setFilterValue(query.field_value as FilterValueType || INITIAL_FILTER_STATE.fieldValue);
+    updatePagination({ currentPage: 1 });
+  }, [updatePagination]);
+
+  const handleApprovalChange = useCallback((value: string | null) => {
+    setApprovalFilter(value as ApprovalFilterType || INITIAL_FILTER_STATE.approval);
+    updatePagination({ currentPage: 1 });
+  }, [updatePagination]);
 
   const headers = [
     { label: 'Contest Name' },
@@ -55,9 +90,13 @@ export const ContestsTable = () => {
       <div key={contest.contest_id} className={`flex items-center pl-6`}>
         {contest.contest_name}
       </div>,
-      <div key={`location-${contest.contest_id}`}>
-        <Tooltip content={contest.location_url}>
-          <span className="px-2">{contest.location}</span>
+      <div key={`location-${contest.contest_id}`} className="flex items-center pl-6">
+        <Tooltip content={
+          <div className="max-w-[200px] truncate">
+            {contest.location_url}
+          </div>
+        }>
+          <span>{contest.location}</span>
         </Tooltip>
       </div>,
       <div key={`date-${contest.contest_id}`}>
@@ -66,7 +105,7 @@ export const ContestsTable = () => {
           : contest.start_date}
       </div>,
       contest.categories,
-      <div key={`approved-${contest.contest_id}`} className="flex items-center justify-center">
+      <div key={`approved-${contest.contest_id}`} className="flex items-center">
         <EventStatus isApproved={contest.is_approved} />
       </div>,
     ],
@@ -81,13 +120,24 @@ export const ContestsTable = () => {
         refreshContests={fetchContests}
       />
       <div className="w-full">
-        <IconButton
-          disabled={!rolesPermited}
-          onClick={() => setModalOpenWithContest({} as ContestsGET)}
-          tooltip="Add new contest"
-        >
-          <PlusIcon className="w-10 h-10 text-amber-600" />
-        </IconButton>
+        <div className="flex flex-col gap-4">
+          <TableFilter
+            filterFields={CONTEST_FILTER_FIELDS}
+            onFilterChange={handleFilterChange}
+            placeholder="Search contests..."
+          />
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <ApprovalFilter onApprovalChange={handleApprovalChange} />
+            <IconButton
+              disabled={!rolesPermited}
+              onClick={() => setModalOpenWithContest({} as ContestsGET)}
+              tooltip="Add new contest"
+              className="scale-90 hover:scale-100 transition-transform flex-shrink-0"
+            >
+              <PlusIcon className="w-8 h-8 sm:w-10 sm:h-10 text-amber-600" />
+            </IconButton>
+          </div>
+        </div>
         {loading ? (
           <ContentLoader />
         ) : contests.length === 0 ? (
@@ -104,8 +154,17 @@ export const ContestsTable = () => {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="overflow-x-auto">
-              <Table headers={headers} rows={rows} />
+            <div className="flex flex-col gap-4 mt-4">
+              <div className="overflow-x-auto">
+                <Table headers={headers} rows={rows} /> 
+              </div>
+              <div className="flex justify-center w-full">
+                <Pagination
+                  pageCount={totalPages}
+                  currentPage={currentPage - 1}
+                  onPageChange={handlePageChange}
+                />
+              </div>
             </div>
           </Transition>
         )}

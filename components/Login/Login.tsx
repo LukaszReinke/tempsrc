@@ -1,16 +1,17 @@
 'use client';
-
 import { ROUTES } from '@hd/consts';
 import { useUser } from '@hd/context';
 import { Button, Input, LinkText } from '@hd/ui';
 import { useRef, useState } from 'react';
 import { toast } from 'react-toastify';
+import { useGoogleReCaptcha } from '@google-recaptcha/react';
 
 export const Login = () => {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const { login } = useUser();
+  const { executeV3 } = useGoogleReCaptcha();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,6 +20,30 @@ export const Login = () => {
 
     if (!email || !password) {
       toast.error(`Both fields marked with '*' are required`);
+      return;
+    }
+
+    if (!executeV3) {
+      console.log('not available to execute recaptcha');
+      return;
+    }
+    const gRecaptchaToken = await executeV3('login');
+
+    const captcha_response = await fetch('/api/recaptchaSubmit', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json, text/plain, */*',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        gRecaptchaToken,
+      }),
+    });
+
+    const data = await captcha_response.json();
+
+    if (data?.success !== true) {
+      toast.error('Failed to verify recaptcha! You must be a robot!');
       return;
     }
 

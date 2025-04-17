@@ -1,2 +1,7 @@
-export const formatDateString = (start_date: string, end_date: string) =>
-  start_date === end_date ? start_date : `${start_date} - ${end_date}`;
+export const formatDateString = (startDate: string, endDate?: string | null): string => {
+  if (!endDate || startDate === endDate) {
+    return startDate;
+  }
+
+  return `${startDate} - ${endDate}`;
+};
